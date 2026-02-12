@@ -6,20 +6,14 @@ Vertical feed model (similar to Instagram, Strava, TikTok, etc.)
 Big picture: a 3-tab main view
 
 Users can slide or toggle between:
-
-Workout activity from friends
-
-Posts by influencers or brands
-
-Workout plans and meal plans
+- Workout activity from friends
+- Posts by influencers or brands
+- Workout plans and meal plans
 
 Why This Works
-
-3-tab vertical feed model is familiar to users
-
-Vertical feeds scale well as content grows
-
-Each tab has its own content contract, clearly separating its purpose and avoiding confusion
+- 3-tab vertical feed model is familiar to users
+- Vertical feeds scale well as content grows
+- Each tab has its own content contract, clearly separating its purpose and avoiding confusion
 
 Each tab must answer a different user question
 
