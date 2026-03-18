@@ -27,7 +27,7 @@ export default function AppTabs() {
 
       <NativeTabs.Trigger name="plans">
         <NativeTabs.Trigger.Label>Plans</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="dumbbell.fill" md="fitness_center"/>
+        <NativeTabs.Trigger.Icon sf="dumbbell" md="fitness_center"/>
       </NativeTabs.Trigger>
 
     </NativeTabs>
