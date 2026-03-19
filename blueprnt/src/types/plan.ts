@@ -11,7 +11,7 @@ export type PlanDifficulty = 'beginner' | 'intermediate' | 'advanced';
 
 export type PlanType = 'workout' | 'meal' | 'hybrid';
 
-export type PlanStatus = 'waiting' | 'started' | 'halfway' | 'done';
+export type PlanStatus = 'waiting' | 'started' | 'in-progress' | 'done';
 
 export type Plan = {
   PK: string;

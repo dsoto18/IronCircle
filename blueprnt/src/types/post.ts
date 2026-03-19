@@ -19,10 +19,24 @@ export type Post = {
   updatedAt: string;
   type?: WorkoutType;
   calories?: number;
-  distanceMiles?: number;
+  distanceMiles?: number; // I can translate to other units based off settings later
   durationMinutes?: number;
   imageUrl?: string;
   caption?: string;
-  visibility: PostVisibility;
+  visibility: PostVisibility; // friends is default
   planId?: string;
+};
+
+export type FeedPostAuthor = {
+  userId: string;
+  username: string;
+  profilePictureUrl?: string;
+  isVerified: boolean;
+};
+
+export type FeedPost = {
+  post: Post;
+  author: FeedPostAuthor;
+  isLiked?: boolean;
+  likeCount?: number;
 };
