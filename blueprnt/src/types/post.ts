@@ -16,15 +16,16 @@ export type Post = {
   entity: 'POST';
   userId: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   type?: WorkoutType;
-  calories?: number;
-  distanceMiles?: number; // I can translate to other units based off settings later
-  durationMinutes?: number;
+  calories?: string | number;
+  distance?: string | number; // I can translate to other units based off settings later, for now Miles
+  duration?: string | number; // in Minutes
   imageUrl?: string;
   caption?: string;
   visibility: PostVisibility; // friends is default
   planId?: string;
+  postId: string;
 };
 
 export type FeedPostAuthor = {

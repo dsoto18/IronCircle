@@ -73,19 +73,35 @@ function formatMetricValue(label: 'distance' | 'calories' | 'duration', value: n
   return `${value} min`;
 }
 
+function parseMetricValue(value?: string | number) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
 export function PostCard({ item }: PostCardProps) {
   const theme = useTheme();
   const { author, post } = item;
+  const distanceValue = parseMetricValue(post.distance);
+  const caloriesValue = parseMetricValue(post.calories);
+  const durationValue = parseMetricValue(post.duration);
 
   const metrics = [
-    post.distanceMiles !== undefined
-      ? { icon: 'road' as const, label: 'distance' as const, value: post.distanceMiles }
+    distanceValue !== null
+      ? { icon: 'road' as const, label: 'distance' as const, value: distanceValue }
       : null,
-    post.calories !== undefined
-      ? { icon: 'fire' as const, label: 'calories' as const, value: post.calories }
+    caloriesValue !== null
+      ? { icon: 'fire' as const, label: 'calories' as const, value: caloriesValue }
       : null,
-    post.durationMinutes !== undefined
-      ? { icon: 'clock-o' as const, label: 'duration' as const, value: post.durationMinutes }
+    durationValue !== null
+      ? { icon: 'clock-o' as const, label: 'duration' as const, value: durationValue }
       : null,
   ].filter((metric): metric is NonNullable<typeof metric> => metric !== null);
 
