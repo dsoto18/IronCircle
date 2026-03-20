@@ -1,6 +1,7 @@
 import { FontAwesome } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -41,7 +42,7 @@ function formatWorkoutType(type?: FeedPost['post']['type']) {
 }
 
 function getWorkoutTypeColors(type?: FeedPost['post']['type']) {
-  switch (type) {
+  switch (type?.toLowerCase()) {
     case 'lift':
       return { backgroundColor: '#DBEAFE', textColor: '#1D4ED8' };
     case 'run':
@@ -51,11 +52,13 @@ function getWorkoutTypeColors(type?: FeedPost['post']['type']) {
     case 'yoga':
       return { backgroundColor: '#F3E8FF', textColor: '#7E22CE' };
     case 'hiit':
-      return { backgroundColor: '#FEE2E2', textColor: '#B91C1C' };
+      return { backgroundColor: '#DCFCE7', textColor: '#15803D' };
     case 'cycle':
       return { backgroundColor: '#FEF3C7', textColor: '#B45309' };
     case 'walk':
-      return { backgroundColor: '#E0F2FE', textColor: '#0F766E' };
+      return { backgroundColor: '#CCFBF1', textColor: '#0F766E' };
+    case 'mobility':
+      return { backgroundColor: '#FCE7F3', textColor: '#DB2777' };
     default:
       return { backgroundColor: '#E5E7EB', textColor: '#4B5563' };
   }
@@ -89,6 +92,7 @@ function parseMetricValue(value?: string | number) {
 export function PostCard({ item }: PostCardProps) {
   const theme = useTheme();
   const { author, post } = item;
+  const [cardWidth, setCardWidth] = useState(0);
   const distanceValue = parseMetricValue(post.distance);
   const caloriesValue = parseMetricValue(post.calories);
   const durationValue = parseMetricValue(post.duration);
@@ -110,72 +114,100 @@ export function PostCard({ item }: PostCardProps) {
   const workoutTypeColors = getWorkoutTypeColors(post.type);
 
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.headerMain}>
-          {author.profilePictureUrl ? (
-            <Image source={author.profilePictureUrl} style={styles.avatar} contentFit="cover" />
-          ) : (
-            <View
-              style={[
-                styles.avatar,
-                styles.avatarFallback,
-                { backgroundColor: theme.backgroundSelected },
-              ]}>
-              <ThemedText type="smallBold">{avatarFallback}</ThemedText>
-            </View>
-          )}
+    <ThemedView
+      type="backgroundElement"
+      style={styles.card}
+      onLayout={(event) => setCardWidth(event.nativeEvent.layout.width)}>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        nestedScrollEnabled
+        contentContainerStyle={styles.pages}>
+        <View style={[styles.page, cardWidth > 0 ? { width: cardWidth } : null]}>
+          <View style={styles.header}>
+            <View style={styles.headerMain}>
+              {author.profilePictureUrl ? (
+                <Image source={author.profilePictureUrl} style={styles.avatar} contentFit="cover" />
+              ) : (
+                <View
+                  style={[
+                    styles.avatar,
+                    styles.avatarFallback,
+                    { backgroundColor: theme.backgroundSelected },
+                  ]}>
+                  <ThemedText type="smallBold">{avatarFallback}</ThemedText>
+                </View>
+              )}
 
-          <View style={styles.headerText}>
-            <View style={styles.authorRow}>
-              <ThemedText type="smallBold">{author.username}</ThemedText>
-              {author.isVerified ? (
-                <FontAwesome name="check-circle" size={14} color="#2F80ED" />
-              ) : null}
+              <View style={styles.headerText}>
+                <View style={styles.authorRow}>
+                  <ThemedText type="smallBold">{author.username}</ThemedText>
+                  {author.isVerified ? (
+                    <FontAwesome name="check-circle" size={14} color="#2F80ED" />
+                  ) : null}
+                </View>
+
+                <ThemedText type="small" themeColor="textSecondary">
+                  {formatPostTime(post.createdAt)}
+                </ThemedText>
+              </View>
             </View>
 
-            <ThemedText type="small" themeColor="textSecondary">
-              {formatPostTime(post.createdAt)}
-            </ThemedText>
+            {formattedType ? (
+              <View style={[styles.typePill, { backgroundColor: workoutTypeColors.backgroundColor }]}>
+                <ThemedText type="smallBold" style={{ color: workoutTypeColors.textColor }}>
+                  {formattedType}
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
+
+          {post.imageUrl ? (
+            <Image source={post.imageUrl} style={styles.image} contentFit="cover" />
+          ) : null}
+
+          {post.caption ? <ThemedText style={styles.caption}>{post.caption}</ThemedText> : null}
+
+          {metrics.length > 0 ? (
+            <View style={styles.metricsRow}>
+              {metrics.map((metric) => (
+                <View key={metric.label} style={styles.metricPill}>
+                  <FontAwesome name={metric.icon} size={14} color={theme.textSecondary} />
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {formatMetricValue(metric.label, metric.value)}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          <Pressable style={styles.actionRow}>
+            <FontAwesome
+              name={item.isLiked ? 'heart' : 'heart-o'}
+              size={18}
+              color={item.isLiked ? '#2F80ED' : theme.text}
+            />
+            <ThemedText type="smallBold">{item.likeCount ?? 0}</ThemedText>
+          </Pressable>
         </View>
 
-        {formattedType ? (
-          <View style={[styles.typePill, { backgroundColor: workoutTypeColors.backgroundColor }]}>
-            <ThemedText type="smallBold" style={{ color: workoutTypeColors.textColor }}>
-              {formattedType}
-            </ThemedText>
-          </View>
-        ) : null}
-      </View>
-
-      {post.imageUrl ? (
-        <Image source={post.imageUrl} style={styles.image} contentFit="cover" />
-      ) : null}
-
-      {post.caption ? <ThemedText style={styles.caption}>{post.caption}</ThemedText> : null}
-
-      {metrics.length > 0 ? (
-        <View style={styles.metricsRow}>
-          {metrics.map((metric) => (
-            <View key={metric.label} style={styles.metricPill}>
-              <FontAwesome name={metric.icon} size={14} color={theme.textSecondary} />
-              <ThemedText type="small" themeColor="textSecondary">
-                {formatMetricValue(metric.label, metric.value)}
-              </ThemedText>
-            </View>
-          ))}
+        <View
+          style={[
+            styles.page,
+            styles.detailsPage,
+            cardWidth > 0 ? { width: cardWidth } : null,
+          ]}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Plan Link
+          </ThemedText>
+          <ThemedText type="subtitle">Linked to Plan</ThemedText>
+          <ThemedText style={styles.detailsText} themeColor="textSecondary">
+            This text is a placeholder. Working to eventually have Plan details if linked..
+          </ThemedText>
         </View>
-      ) : null}
-
-      <Pressable style={styles.actionRow}>
-        <FontAwesome
-          name={item.isLiked ? 'heart' : 'heart-o'}
-          size={18}
-          color={item.isLiked ? '#2F80ED' : theme.text}
-        />
-        <ThemedText type="smallBold">{item.likeCount ?? 0}</ThemedText>
-      </Pressable>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -183,6 +215,12 @@ export function PostCard({ item }: PostCardProps) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: Spacing.four,
+    overflow: 'hidden',
+  },
+  pages: {
+    alignItems: 'stretch',
+  },
+  page: {
     padding: Spacing.three,
     gap: Spacing.three,
   },
@@ -250,5 +288,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  detailsPage: {
+    justifyContent: 'center',
+    minHeight: 240,
+  },
+  detailsText: {
+    lineHeight: 22,
   },
 });

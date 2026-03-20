@@ -10,7 +10,7 @@ import { mockFeedPosts } from '@/mocks/feed-posts';
 import { client } from '@/services/client';
 import type { FeedPost } from '@/types';
 
-const TEST_USER_ID = '9a6a42cf-90aa-40e2-8582-f1369993b65d'; // change with local data
+const TEST_USER_ID = '69ece145-8b07-49e2-b698-69fa3f466419'; // change with local data
 
 export default function HomeScreen() {
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);

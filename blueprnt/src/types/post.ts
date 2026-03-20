@@ -1,12 +1,13 @@
 export type WorkoutType =
-  | 'run'
-  | 'lift'
-  | 'swim'
-  | 'yoga'
-  | 'hiit'
-  | 'cycle'
-  | 'walk'
-  | 'other';
+  | 'Run'
+  | 'Lift'
+  | 'Swim'
+  | 'Yoga'
+  | 'HIIT'
+  | 'Cycle'
+  | 'Walk'
+  | 'Mobility'
+  | 'Other';
 
 export type PostVisibility = 'private' | 'friends' | 'public';
 
