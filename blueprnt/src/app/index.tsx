@@ -7,15 +7,61 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { mockFeedPosts } from '@/mocks/feed-posts';
-import { client } from '@/services/client';
+import { getFeed } from '@/services/feed';
+import { likePost, unlikePost } from '@/services/likes';
 import type { FeedPost } from '@/types';
 
-const TEST_USER_ID = '69ece145-8b07-49e2-b698-69fa3f466419'; // change with local data
+const TEST_USER_ID = '0f65c985-8d80-4a15-9e75-f0adf480fc13'; // change with local data
+// const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [likeLoadingPostIds, setLikeLoadingPostIds] = useState<string[]>([]);
+
+  async function handleToggleLike(item: FeedPost) {
+    const { post, isLiked } = item;
+    const postId = post.postId;
+
+    if (likeLoadingPostIds.includes(postId)) {
+      return;
+    }
+
+    setLikeLoadingPostIds((current) => [...current, postId]);
+
+    try {
+      const payload = {
+        userId: TEST_USER_ID,
+        author: post.userId,
+        createdAt: post.createdAt,
+      };
+
+      if (isLiked) {
+        await unlikePost(postId, payload);
+      } else {
+        await likePost(postId, payload);
+      }
+
+      setFeedPosts((currentPosts) =>
+        currentPosts.map((currentPost) =>
+          currentPost.post.postId === postId
+            ? {
+                ...currentPost,
+                isLiked: !isLiked,
+                likeCount: isLiked
+                  ? (currentPost.likeCount ?? 0) - 1
+                  : (currentPost.likeCount ?? 0) + 1,
+              }
+            : currentPost
+        )
+      );
+    } catch (error) {
+      console.error(`Failed to ${isLiked ? 'remove like from' : 'like'} post`, error);
+    } finally {
+      setLikeLoadingPostIds((current) => current.filter((id) => id !== postId));
+    }
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -25,7 +71,7 @@ export default function HomeScreen() {
         setIsLoading(true);
         setErrorMessage(null);
 
-        const data = await client.get<FeedPost[]>(`/feed/${TEST_USER_ID}`);
+        const data = await getFeed(TEST_USER_ID);
 
         if (!isMounted) {
           return;
@@ -86,7 +132,13 @@ export default function HomeScreen() {
         <FlatList
           data={feedPosts}
           keyExtractor={(item) => item.post.postId}
-          renderItem={({ item }) => <PostCard item={item} />}
+          renderItem={({ item }) => (
+            <PostCard
+              item={item}
+              isLikeLoading={likeLoadingPostIds.includes(item.post.postId)}
+              onToggleLike={handleToggleLike}
+            />
+          )}
           contentContainerStyle={styles.feedContent}
           showsVerticalScrollIndicator={false}
         />

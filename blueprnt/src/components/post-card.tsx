@@ -11,6 +11,8 @@ import type { FeedPost } from '@/types';
 
 type PostCardProps = {
   item: FeedPost;
+  isLikeLoading?: boolean;
+  onToggleLike?: (item: FeedPost) => void;
 };
 
 function formatPostTime(isoDate: string) {
@@ -73,6 +75,13 @@ function formatMetricValue(label: 'distance' | 'calories' | 'duration', value: n
     return `${value} cal`;
   }
 
+  const num = Number(value);
+  if(Math.floor(num / 60) > 0 && num % 60 > 0){
+    return `${Math.floor(num / 60)} hr ${num % 60} min`
+  }
+  if(Math.floor(num / 60) > 0){
+    return `${num / 60} hr`
+  }
   return `${value} min`;
 }
 
@@ -89,7 +98,7 @@ function parseMetricValue(value?: string | number) {
   return null;
 }
 
-export function PostCard({ item }: PostCardProps) {
+export function PostCard({ item, isLikeLoading = false, onToggleLike }: PostCardProps) {
   const theme = useTheme();
   const { author, post } = item;
   const [cardWidth, setCardWidth] = useState(0);
@@ -183,14 +192,23 @@ export function PostCard({ item }: PostCardProps) {
             </View>
           ) : null}
 
-          <Pressable style={styles.actionRow}>
-            <FontAwesome
-              name={item.isLiked ? 'heart' : 'heart-o'}
-              size={18}
-              color={item.isLiked ? '#2F80ED' : theme.text}
-            />
-            <ThemedText type="smallBold">{item.likeCount ?? 0}</ThemedText>
-          </Pressable>
+          <View style={styles.actionRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.likeButton,
+                pressed ? styles.actionRowPressed : null,
+                isLikeLoading ? styles.actionRowDisabled : null,
+              ]}
+              onPress={() => onToggleLike?.(item)}
+              disabled={isLikeLoading}>
+              <FontAwesome
+                name={item.isLiked ? 'heart' : 'heart-o'}
+                size={18}
+                color={item.isLiked ? '#2F80ED' : theme.text}
+              />
+            </Pressable>
+            <ThemedText type="smallBold">{item.likeCount}</ThemedText>
+          </View>
         </View>
 
         <View
@@ -288,6 +306,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  likeButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionRowPressed: {
+    opacity: 0.7,
+  },
+  actionRowDisabled: {
+    opacity: 0.45,
   },
   detailsPage: {
     justifyContent: 'center',
