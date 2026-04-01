@@ -34,6 +34,7 @@ function getDefaultBaseUrl() {
   }
 
   return 'http://localhost:3000';
+  // return 'http://dualstack.blueprint-alb-2077899509.us-east-1.elb.amazonaws.com'
 }
 
 function buildUrl(path: string) {
@@ -83,7 +84,6 @@ export const client = {
     request<T>(path, { ...options, method: 'PUT', body }),
   patch: <T>(path: string, body?: JsonValue, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'PATCH', body }),
-  delete: <T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+  delete: <T>(path: string, options?: Omit<RequestOptions, 'method'>) =>
     request<T>(path, { ...options, method: 'DELETE' }),
 };
-
