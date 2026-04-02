@@ -3,10 +3,10 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PostCard } from '@/components/post-card';
+import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { mockFeedPosts } from '@/mocks/feed-posts';
 import { getFeed } from '@/services/feed';
 import { likePost, unlikePost } from '@/services/likes';
@@ -16,7 +16,6 @@ const TEST_USER_ID = '95bf7d95-cebd-4b73-8aa6-057c3995a059'; // change with loca
 // const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
-  const theme = useTheme();
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -105,17 +104,15 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <ThemedText type="small" style={{ color: theme.accent }}>
-              Blueprnt
+        <ScreenHeader
+          eyebrow="Blueprnt"
+          title="Checkout Your Circle&apos;s Activity"
+          trailingContent={
+            <ThemedText type="small" themeColor="textSecondary">
+              {feedPosts.length} posts
             </ThemedText>
-            <ThemedText type="subtitle">Checkout Your Circle&apos;s Activity</ThemedText>
-          </View>
-        </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            {feedPosts.length} posts
-          </ThemedText>
+          }
+        />
 
         {isLoading ? (
           <View style={styles.stateContainer}>
@@ -159,16 +156,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
     maxWidth: MaxContentWidth,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.three,
-  },
-  headerText: {
-    gap: Spacing.half,
   },
   feedContent: {
     paddingVertical: Spacing.four,
