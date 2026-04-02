@@ -4,7 +4,7 @@ export type PlanGoal =
   | 'strength-training'
   | 'weight-loss'
   | 'flexibility-mindfulness'
-  | 'hyrox'
+  | 'hiit'
   | 'general-fitness';
 
 export type PlanDifficulty = 'beginner' | 'intermediate' | 'advanced';
@@ -18,6 +18,7 @@ export type Plan = {
   SK: string;
   entity: 'PLAN';
   creatorId: string;
+  creatorName: string;
   title: string;
   summary: string;
   description?: string;
@@ -27,6 +28,8 @@ export type Plan = {
   type: PlanType;
   tags?: string[];
   coverImageUrl?: string;
+  rating: number;
+  enrollmentCount: number;
   createdAt: string;
   updatedAt: string;
 };
