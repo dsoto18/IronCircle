@@ -8,11 +8,34 @@ type FilterChipProps = {
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  variant?: 'default' | 'accent';
 };
 
-export function FilterChip({ label, selected = false, onPress }: FilterChipProps) {
+export function FilterChip({
+  label,
+  selected = false,
+  onPress,
+  variant = 'default',
+}: FilterChipProps) {
   const theme = useTheme();
   const isInteractive = Boolean(onPress);
+  const isAccentVariant = variant === 'accent';
+
+  const backgroundColor = selected
+    ? theme.text
+    : isAccentVariant
+      ? `${theme.accent}1A`
+      : theme.backgroundElement;
+  const borderColor = selected
+    ? theme.text
+    : isAccentVariant
+      ? `${theme.accent}33`
+      : theme.backgroundSelected;
+  const textColor = selected
+    ? theme.background
+    : isAccentVariant
+      ? theme.accent
+      : theme.textSecondary;
 
   return (
     <Pressable
@@ -21,14 +44,12 @@ export function FilterChip({ label, selected = false, onPress }: FilterChipProps
       style={({ pressed }) => [
         styles.chip,
         {
-          backgroundColor: selected ? theme.text : theme.backgroundElement,
-          borderColor: selected ? theme.text : theme.backgroundSelected,
+          backgroundColor,
+          borderColor,
         },
         pressed && isInteractive ? styles.pressed : null,
       ]}>
-      <ThemedText
-        type="smallBold"
-        style={{ color: selected ? theme.background : theme.textSecondary }}>
+      <ThemedText type="smallBold" style={{ color: textColor }}>
         {label}
       </ThemedText>
     </Pressable>

@@ -1,12 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Spacing, ThemeColor } from '@/constants/theme';
 
 type ScreenHeaderProps = {
   eyebrow?: string;
   title: string;
   subtitle?: string;
+  eyebrowColor?: ThemeColor;
   trailingContent?: React.ReactNode;
 };
 
@@ -14,13 +15,14 @@ export function ScreenHeader({
   eyebrow,
   title,
   subtitle,
+  eyebrowColor = 'accent',
   trailingContent,
 }: ScreenHeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.copy}>
         {eyebrow ? (
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="small" themeColor={eyebrowColor}>
             {eyebrow}
           </ThemedText>
         ) : null}

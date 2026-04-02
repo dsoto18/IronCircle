@@ -39,10 +39,10 @@ function getTypeAccent(type: PlanType) {
     case 'workout':
       return { backgroundColor: '#DBEAFE', textColor: '#1D4ED8' };
     case 'meal':
-      return { backgroundColor: '#DCFCE7', textColor: '#15803D' };
-    case 'hybrid':
       return { backgroundColor: '#FDE68A', textColor: '#92400E' };
-    default:
+    case 'hybrid':
+      return { backgroundColor: '#DCFCE7', textColor: '#15803D' };
+    default: // Should never hit this type but handled in case
       return { backgroundColor: '#E5E7EB', textColor: '#4B5563' };
   }
 }
@@ -106,7 +106,7 @@ export function PlanCard({ plan }: PlanCardProps) {
         {plan.tags?.length ? (
           <View style={styles.tagsRow}>
             {plan.tags.slice(0, 3).map((tag) => (
-              <FilterChip key={tag} label={tag} />
+              <FilterChip key={tag} label={tag} variant="accent" />
             ))}
           </View>
         ) : null}

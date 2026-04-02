@@ -6,6 +6,7 @@ import { PostCard } from '@/components/post-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { mockFeedPosts } from '@/mocks/feed-posts';
 import { getFeed } from '@/services/feed';
 import { likePost, unlikePost } from '@/services/likes';
@@ -15,6 +16,7 @@ const TEST_USER_ID = '95bf7d95-cebd-4b73-8aa6-057c3995a059'; // change with loca
 // const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -105,15 +107,15 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Home
+            <ThemedText type="small" style={{ color: theme.accent }}>
+              Blueprnt
             </ThemedText>
-            <ThemedText type="subtitle">Blueprnt</ThemedText>
+            <ThemedText type="subtitle">Checkout Your Circle&apos;s Activity</ThemedText>
           </View>
+        </View>
           <ThemedText type="small" themeColor="textSecondary">
             {feedPosts.length} posts
           </ThemedText>
-        </View>
 
         {isLoading ? (
           <View style={styles.stateContainer}>

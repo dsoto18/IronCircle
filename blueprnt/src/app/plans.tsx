@@ -60,13 +60,13 @@ export default function PlansScreen() {
           ListHeaderComponent={
             <View style={styles.headerBlock}>
               <ScreenHeader
-                eyebrow="Plans"
-                title="Build your next routine"
-                subtitle="Browse workout, nutrition, and hybrid programs designed around clear goals."
+                eyebrow="Blueprnt"
+                title="Find your routine"
+                subtitle="Browse free workout, nutrition, and hybrid programs designed around clear goals."
                 trailingContent={
                   <ThemedText type="small" themeColor="textSecondary">
                     {filteredPlans.length} plans
-                  </ThemedText>
+                  </ThemedText> 
                 }
               />
 
