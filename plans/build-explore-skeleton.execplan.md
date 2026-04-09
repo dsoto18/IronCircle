@@ -12,6 +12,11 @@ Replace the Expo starter content in the `Explore` tab with an initial product-sp
 - [x] (2026-04-02 19:00Z) Replaced the Expo starter content in `blueprnt/src/app/explore.tsx` with a small shared-component skeleton using `ScreenHeader`, `SearchBar`, and a themed placeholder card.
 - [x] (2026-04-02 19:00Z) Refactored `blueprnt/src/app/index.tsx` to use `ScreenHeader` for the current home eyebrow, title, and post-count display.
 - [x] (2026-04-02 19:00Z) Ran `npx tsc --noEmit` and `npm run lint` from `blueprnt/`; both completed successfully after the Explore/Home route updates.
+- [x] (2026-04-02 19:13Z) Added a visual Explore filter-chip row under the shared search bar with `All`, `Influencers`, `Clubs`, and `Brands`, keeping it scaffold-only for now.
+- [x] (2026-04-02 19:13Z) Re-ran `npx tsc --noEmit` and `npm run lint` from `blueprnt/` after the Explore chip-row update; both passed.
+- [x] (2026-04-02 21:33Z) Added `ExploreItem` types with string `PK`/`SK`, local mock Explore data, and a first reusable `ExploreCard` component for posts, announcements, challenges, and ads.
+- [x] (2026-04-02 21:33Z) Replaced the Explore placeholder block with a simple vertical list render that uses the existing search and filter scaffold against mock data.
+- [x] (2026-04-02 21:33Z) Re-ran `npx tsc --noEmit` and `npm run lint` from `blueprnt/` after the Explore data/card pass; both passed.
 
 ## Surprises & Discoveries
 
@@ -19,18 +24,32 @@ Replace the Expo starter content in the `Explore` tab with an initial product-sp
   Evidence: The route still renders Expo docs links, `Collapsible` sections, and tutorial images.
 - Observation: `blueprnt/src/app/index.tsx` contains a recent user edit for the home title copy and accent-colored `Blueprnt` eyebrow, but the post-count text currently sits outside the header row.
   Evidence: The `feedPosts.length` text is rendered after the header `View` closes.
+- Observation: The Explore feed benefits from a separate card model instead of reusing `PostCard`, because its source types and content types are more editorial/promotional than peer activity.
+  Evidence: Explore items now need to represent influencers, clubs, and brands, plus posts, announcements, challenges, and ads.
 
 ## Decision Log
 
 - Decision: Limit this pass to shared-header reuse and a minimal Explore skeleton instead of building cards or feed sections yet.
   Rationale: The user explicitly asked to work incrementally and stop after the first structural reuse pass.
   Date/Author: 2026-04-02 / User + Codex
+- Decision: Add the Explore filter chips visually now, but do not connect them to search or filtering behavior yet.
+  Rationale: The user wanted the chip row present in the UI immediately, while still keeping the feature rollout incremental and low-risk.
+  Date/Author: 2026-04-02 / User + Codex
+- Decision: Introduce a dedicated `ExploreItem` type and `ExploreCard` instead of extending the existing home-feed `PostCard`.
+  Rationale: The user clarified that Explore will contain verified influencer, club, and brand content such as posts, announcements, challenges, and ads. That content contract differs enough from friend workout activity that a separate Explore-focused card keeps the UI clearer and the code easier to evolve.
+  Date/Author: 2026-04-02 / User + Codex
+- Decision: Include `PK` and `SK` string attributes directly on `ExploreItem`.
+  Rationale: The user explicitly requested those attributes, and aligning the new Explore mock type with the repository’s existing item-shape conventions keeps data modeling more consistent.
+  Date/Author: 2026-04-02 / User + Codex
 
 ## Outcomes & Retrospective
 
 - `Explore` now shows a product-specific skeleton instead of Expo template content.
 - `Home` now uses the same `ScreenHeader` primitive as `Plans` and `Explore`, which gives the top-level tabs a more consistent header structure.
-- This pass intentionally stops before introducing Explore mock data, cards, or filtering behavior so the next iteration can stay focused.
+- `Explore` now also visually matches the Plans scaffold more closely by including the same chip-row pattern under the shared search bar.
+- `Explore` now has a first real data model, mock content set, and reusable card component tailored to verified creator/club/brand content.
+- The shared search bar and source filter chips now drive local filtering against Explore mock data.
+- This pass still stops short of richer detail screens, hero images, or more advanced sectioning so the next iteration can stay focused.
 
 ## Context and Orientation
 
@@ -38,6 +57,9 @@ Replace the Expo starter content in the `Explore` tab with an initial product-sp
 - `blueprnt/src/app/index.tsx` is the Home/Friends route and already contains product-specific content that should keep its current wording while switching to shared header rendering.
 - `blueprnt/src/components/screen-header.tsx` is the shared header primitive introduced during the Plans work and should become the common tab-title pattern.
 - `blueprnt/src/components/search-bar.tsx` is the reusable search input component that should be reused in Explore without adding new search logic yet.
+- `blueprnt/src/components/explore-card.tsx` is now the Explore-specific presentational card for verified source content.
+- `blueprnt/src/mocks/explore-items.ts` now provides the local Explore feed data used for the first list render.
+- `blueprnt/src/types/explore.ts` defines `ExploreItem`, including string `PK` and `SK` attributes and the Explore-specific source/content type unions.
 - `blueprnt/src/constants/theme.ts` provides spacing, max-width, bottom-tab inset, and the shared `accent` token that should continue to drive branded eyebrow text.
 
 ## Plan of Work
@@ -100,7 +122,10 @@ Lint completes successfully after the route changes.
 
 ## Artifacts and Notes
 
-- This pass intentionally does not add Explore data models, mock data, cards, or filters beyond the shared search input.
+- This pass now includes:
+  - `blueprnt/src/types/explore.ts`
+  - `blueprnt/src/mocks/explore-items.ts`
+  - `blueprnt/src/components/explore-card.tsx`
 - The recent accent-color and chip-variant work remains documented in `plans/build-initial-plans-screen.execplan.md`.
 - Explore skeleton added in `blueprnt/src/app/explore.tsx`.
 - Home header reuse landed in `blueprnt/src/app/index.tsx`.
@@ -111,10 +136,16 @@ Lint completes successfully after the route changes.
   - `blueprnt/src/app/explore.tsx`
   - `blueprnt/src/app/index.tsx`
 - Shared components:
+  - `blueprnt/src/components/explore-card.tsx`
   - `blueprnt/src/components/screen-header.tsx`
   - `blueprnt/src/components/search-bar.tsx`
+  - `blueprnt/src/components/filter-chip.tsx`
   - `blueprnt/src/components/themed-text.tsx`
   - `blueprnt/src/components/themed-view.tsx`
+- Mock data:
+  - `blueprnt/src/mocks/explore-items.ts`
+- Types:
+  - `blueprnt/src/types/explore.ts`
 - Theme/constants:
   - `blueprnt/src/constants/theme.ts`
 - Runtime dependencies:
