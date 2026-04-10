@@ -51,8 +51,7 @@ export function PlanCard({ plan }: PlanCardProps) {
   const theme = useTheme();
   const accent = getTypeAccent(plan.type);
   const formattedRating = typeof plan.rating === 'number' ? plan.rating.toFixed(1) : null;
-  const enrollmentLabel =
-    typeof plan.enrollmentCount === 'number' ? `${plan.enrollmentCount} joined` : 'Open';
+  const enrollmentLabel = typeof plan.enrollmentCount === 'number' ? `${plan.enrollmentCount} joined` : 'Open';
 
   return (
     <Pressable style={({ pressed }) => [pressed ? styles.pressed : null]}>
