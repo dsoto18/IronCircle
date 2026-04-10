@@ -15,7 +15,7 @@ import type { Plan, PlanType } from '@/types';
 
 type PlanTypeFilter = 'all' | PlanType;
 
-const TEST_USER_ID = '56ae422b-0adb-4418-a756-4f6c83c029bb';
+const TEST_USER_ID = '33fdc5e3-3c0b-4736-ae6d-a296077abe5d';
 
 const PLAN_TYPE_FILTERS: { label: string; value: PlanTypeFilter }[] = [
   { label: 'All', value: 'all' },
