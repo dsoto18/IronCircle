@@ -33,3 +33,17 @@ export type Plan = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type PlanWeek = {
+  PK: string;
+  SK: string;
+  entity: 'PlanWeek';
+  planId: string;
+  userId: string;
+  weekNumber: number;
+  title: string;
+  summary: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};

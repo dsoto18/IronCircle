@@ -125,18 +125,6 @@ export default function PlansScreen() {
 
               <PlanBuilderShell
                 userId={TEST_USER_ID}
-                onPlanCreated={(plan) =>
-                  setPlans((current) => {
-                    const alreadyExists = current.some(
-                      (existingPlan) =>
-                        existingPlan.planId === plan.planId ||
-                        (existingPlan.createdAt === plan.createdAt &&
-                          existingPlan.title === plan.title)
-                    );
-
-                    return alreadyExists ? current : [plan, ...current];
-                  })
-                }
               />
 
               <ScrollView
