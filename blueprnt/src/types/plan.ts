@@ -1,4 +1,4 @@
-export type PlanGoal =
+export type PlanGoal = // matches API rules
   | 'marathon-training'
   | 'muscle-building'
   | 'strength-training'
@@ -11,14 +11,14 @@ export type PlanDifficulty = 'beginner' | 'intermediate' | 'advanced';
 
 export type PlanType = 'workout' | 'meal' | 'hybrid';
 
-export type PlanStatus = 'waiting' | 'started' | 'in-progress' | 'done';
+export type PlanStatus = 'draft' | 'published' | 'archived'; // For creator-facing plan management features
+
+export type ProgressStatus = 'waiting' | 'started' | 'in-progress' | 'done'; // Future use for User-Progress Tracking
 
 export type Plan = {
-  PK: string;
-  SK: string;
-  entity: 'PLAN';
-  creatorId: string;
-  creatorName: string;
+  planId: string;
+  userId: string;
+  creator: string;
   title: string;
   summary: string;
   description?: string;
@@ -28,8 +28,8 @@ export type Plan = {
   type: PlanType;
   tags?: string[];
   coverImageUrl?: string;
-  rating: number;
-  enrollmentCount: number;
+  rating?: number;
+  enrollmentCount?: number;
   createdAt: string;
   updatedAt: string;
 };

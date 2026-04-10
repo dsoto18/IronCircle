@@ -50,6 +50,9 @@ function getTypeAccent(type: PlanType) {
 export function PlanCard({ plan }: PlanCardProps) {
   const theme = useTheme();
   const accent = getTypeAccent(plan.type);
+  const formattedRating = typeof plan.rating === 'number' ? plan.rating.toFixed(1) : null;
+  const enrollmentLabel =
+    typeof plan.enrollmentCount === 'number' ? `${plan.enrollmentCount} joined` : 'Open';
 
   return (
     <Pressable style={({ pressed }) => [pressed ? styles.pressed : null]}>
@@ -66,15 +69,17 @@ export function PlanCard({ plan }: PlanCardProps) {
             </ThemedText>
           </View>
 
-          <View style={styles.ratingRow}>
-            <FontAwesome name="star" size={14} color="#EAB308" />
-            <ThemedText type="smallBold">{plan.rating.toFixed(1)}</ThemedText>
-          </View>
+          {formattedRating ? (
+            <View style={styles.ratingRow}>
+              <FontAwesome name="star" size={14} color="#EAB308" />
+              <ThemedText type="smallBold">{formattedRating}</ThemedText>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.body}>
           <ThemedText type="smallBold" style={styles.creator}>
-            {plan.creatorName}
+            {plan.creator}
           </ThemedText>
           <ThemedText style={styles.title}>{plan.title}</ThemedText>
           <ThemedText themeColor="textSecondary" style={styles.summary}>
@@ -98,7 +103,7 @@ export function PlanCard({ plan }: PlanCardProps) {
           <View style={styles.statItem}>
             <FontAwesome name="users" size={14} color={theme.textSecondary} />
             <ThemedText type="small" themeColor="textSecondary">
-              {plan.enrollmentCount} joined
+              {enrollmentLabel}
             </ThemedText>
           </View>
         </View>

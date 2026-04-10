@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterChip } from '@/components/filter-chip';
@@ -9,7 +9,7 @@ import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { mockPlans } from '@/mocks/plans';
+import { getPlans } from '@/services/plans';
 import type { PlanType } from '@/types';
 
 type PlanTypeFilter = 'all' | PlanType;
@@ -22,12 +22,52 @@ const PLAN_TYPE_FILTERS: { label: string; value: PlanTypeFilter }[] = [
 ];
 
 export default function PlansScreen() {
+  const [plans, setPlans] = useState<Awaited<ReturnType<typeof getPlans>>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<PlanTypeFilter>('all');
 
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadPlans() {
+      try {
+        setIsLoading(true);
+        setErrorMessage(null);
+
+        const nextPlans = await getPlans();
+
+        if (!isActive) {
+          return;
+        }
+
+        setPlans(nextPlans);
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Unable to load plans right now.'
+        );
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadPlans();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const filteredPlans = mockPlans.filter((plan) => {
+  const filteredPlans = plans.filter((plan) => {
     const matchesType = selectedType === 'all' || plan.type === selectedType;
     if (!matchesType) {
       return false;
@@ -40,7 +80,7 @@ export default function PlansScreen() {
     const searchableFields = [
       plan.title,
       plan.summary,
-      plan.creatorName,
+      plan.creator,
       plan.goal,
       ...(plan.tags ?? []),
     ];
@@ -53,7 +93,7 @@ export default function PlansScreen() {
       <SafeAreaView style={styles.safeArea}>
         <FlatList
           data={filteredPlans}
-          keyExtractor={(item) => item.PK}
+          keyExtractor={(item) => item.planId}
           renderItem={({ item }) => <PlanCard plan={item} />}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -93,18 +133,41 @@ export default function PlansScreen() {
               <View style={styles.sectionHeader}>
                 <ThemedText type="smallBold">Featured plans</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  Free and community-driven
+                  {isLoading ? 'Loading from Blueprnt' : 'Free and community-driven'}
                 </ThemedText>
               </View>
+
+              {isLoading ? (
+                <ThemedView type="backgroundElement" style={styles.statusCard}>
+                  <ActivityIndicator />
+                  <View style={styles.statusCopy}>
+                    <ThemedText type="smallBold">Loading plans...</ThemedText>
+                    <ThemedText themeColor="textSecondary">
+                      Pulling the latest routines from your database.
+                    </ThemedText>
+                  </View>
+                </ThemedView>
+              ) : null}
+
+              {errorMessage ? (
+                <ThemedView type="backgroundElement" style={styles.statusCard}>
+                  <View style={styles.statusCopy}>
+                    <ThemedText type="smallBold">Could not load plans</ThemedText>
+                    <ThemedText themeColor="textSecondary">{errorMessage}</ThemedText>
+                  </View>
+                </ThemedView>
+              ) : null}
             </View>
           }
           ListEmptyComponent={
-            <ThemedView type="backgroundElement" style={styles.emptyState}>
-              <ThemedText type="smallBold">No plans match that search yet.</ThemedText>
-              <ThemedText themeColor="textSecondary" style={styles.emptyCopy}>
-                Try clearing your search or switching to a different plan type.
-              </ThemedText>
-            </ThemedView>
+            !isLoading && !errorMessage ? (
+              <ThemedView type="backgroundElement" style={styles.emptyState}>
+                <ThemedText type="smallBold">No plans match that search yet.</ThemedText>
+                <ThemedText themeColor="textSecondary" style={styles.emptyCopy}>
+                  Try clearing your search or switching to a different plan type.
+                </ThemedText>
+              </ThemedView>
+            ) : null
           }
         />
       </SafeAreaView>
@@ -145,6 +208,17 @@ const styles = StyleSheet.create({
   emptyState: {
     borderRadius: Spacing.four,
     padding: Spacing.four,
+    gap: Spacing.one,
+  },
+  statusCard: {
+    borderRadius: Spacing.four,
+    padding: Spacing.four,
+    gap: Spacing.two,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusCopy: {
+    flex: 1,
     gap: Spacing.one,
   },
   emptyCopy: {
