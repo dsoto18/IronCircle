@@ -27,7 +27,7 @@ export type Plan = {
   durationWeeks: number;
   type: PlanType;
   tags?: string[];
-  coverImageUrl?: string;
+  imageUrl?: string;
   rating?: number;
   enrollmentCount?: number;
   createdAt: string;

@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterChip } from '@/components/filter-chip';
+import { PlanBuilderShell } from '@/components/plan-builder-shell';
 import { PlanCard } from '@/components/plan-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { SearchBar } from '@/components/search-bar';
@@ -10,9 +11,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { getPlans } from '@/services/plans';
-import type { PlanType } from '@/types';
+import type { Plan, PlanType } from '@/types';
 
 type PlanTypeFilter = 'all' | PlanType;
+
+const TEST_USER_ID = '56ae422b-0adb-4418-a756-4f6c83c029bb';
 
 const PLAN_TYPE_FILTERS: { label: string; value: PlanTypeFilter }[] = [
   { label: 'All', value: 'all' },
@@ -20,6 +23,10 @@ const PLAN_TYPE_FILTERS: { label: string; value: PlanTypeFilter }[] = [
   { label: 'Meal', value: 'meal' },
   { label: 'Hybrid', value: 'hybrid' },
 ];
+
+function getPlanListKey(plan: Plan, index: number) {
+  return [plan.planId, plan.createdAt, plan.title, String(index)].filter(Boolean).join('-');
+}
 
 export default function PlansScreen() {
   const [plans, setPlans] = useState<Awaited<ReturnType<typeof getPlans>>>([]);
@@ -93,7 +100,7 @@ export default function PlansScreen() {
       <SafeAreaView style={styles.safeArea}>
         <FlatList
           data={filteredPlans}
-          keyExtractor={(item) => item.planId}
+          keyExtractor={getPlanListKey}
           renderItem={({ item }) => <PlanCard plan={item} />}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -114,6 +121,22 @@ export default function PlansScreen() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search plans, goals, or creators"
+              />
+
+              <PlanBuilderShell
+                userId={TEST_USER_ID}
+                onPlanCreated={(plan) =>
+                  setPlans((current) => {
+                    const alreadyExists = current.some(
+                      (existingPlan) =>
+                        existingPlan.planId === plan.planId ||
+                        (existingPlan.createdAt === plan.createdAt &&
+                          existingPlan.title === plan.title)
+                    );
+
+                    return alreadyExists ? current : [plan, ...current];
+                  })
+                }
               />
 
               <ScrollView
