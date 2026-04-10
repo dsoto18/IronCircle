@@ -35,10 +35,24 @@ export default function PlansScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<PlanTypeFilter>('all');
 
+  async function loadPlans() {
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      const nextPlans = await getPlans();
+      setPlans(nextPlans);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to load plans right now.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   useEffect(() => {
     let isActive = true;
 
-    async function loadPlans() {
+    async function loadPlansForEffect() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
@@ -65,7 +79,7 @@ export default function PlansScreen() {
       }
     }
 
-    loadPlans();
+    loadPlansForEffect();
 
     return () => {
       isActive = false;
@@ -125,6 +139,7 @@ export default function PlansScreen() {
 
               <PlanBuilderShell
                 userId={TEST_USER_ID}
+                onPlanPublished={loadPlans}
               />
 
               <ScrollView

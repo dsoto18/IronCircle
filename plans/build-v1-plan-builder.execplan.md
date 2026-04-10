@@ -16,6 +16,7 @@ Add a first-pass plan creation flow to the app so an author can create a plan sh
 - [x] (2026-04-10 03:05Z) Extended `blueprnt/src/app/plans.tsx` with an inline builder entry point and the first create-only shell UI for plan metadata submission.
 - [x] (2026-04-10 03:13Z) Extracted the shell builder UI and local create logic into `blueprnt/src/components/plan-builder-shell.tsx` so `blueprnt/src/app/plans.tsx` stays focused on screen-level browse orchestration.
 - [x] (2026-04-10 13:32Z) Added `PlanWeek` typing, a typed `createWeek` service helper, and the first child-node builder flow so saved plan shells can now create and render read-only week summaries.
+- [x] (2026-04-10 15:03Z) Added `PlanDay` typing, a typed `createDay` service helper, and nested per-week day creation so each week now owns its own inline day form and saved day cards.
 - [x] (2026-04-10 03:05Z) Ran `npx tsc --noEmit` from `blueprnt/`; it completed successfully after the shell-builder slice.
 
 ## Surprises & Discoveries
@@ -52,9 +53,10 @@ Add a first-pass plan creation flow to the app so an author can create a plan sh
 - The first incremental builder milestone is in place: authors can open a shell form on the `Plans` tab, submit plan metadata, and see the created shell frozen into a read-only summary card.
 - The first create helper now exists in `blueprnt/src/services/plans.ts`, giving the route a typed path to `POST /:userId/plans`.
 - The first child-node pattern is now established with weeks, which gives the builder a concrete model to repeat for days, blocks, and items.
+- Days now hang off their specific saved week cards instead of being flattened at the plan level, which matches the underlying hierarchy more clearly.
 - The frontend plan contract now uses `imageUrl`, matching the backend naming more directly.
 - The shell-builder UI is now extracted into its own component, which gives the next incremental slices a cleaner place to add week/day/block/item behavior.
-- The remaining builder work is still open for days, blocks, and items, plus dedicated nested draft types as the tree grows.
+- The remaining builder work is still open for blocks and items, plus dedicated nested draft types as the tree grows.
 
 ## Context and Orientation
 

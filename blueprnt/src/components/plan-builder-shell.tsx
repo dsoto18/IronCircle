@@ -12,8 +12,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { createPlan, createWeek } from '@/services/plans';
-import type { Plan, PlanDifficulty, PlanGoal, PlanType, PlanWeek } from '@/types';
+import { createDay, createPlan, createWeek, publishPlan } from '@/services/plans';
+import type { Plan, PlanDay, PlanDifficulty, PlanGoal, PlanType, PlanWeek } from '@/types';
 
 type CreatePlanDraft = {
   title: string;
@@ -33,9 +33,17 @@ type CreateWeekDraft = {
   notes: string;
 };
 
+type CreateDayDraft = {
+  title: string;
+  summary: string;
+  notes: string;
+  dayLabel: string;
+};
+
 type PlanBuilderShellProps = {
   userId: string;
   onPlanCreated?: (plan: Plan) => void;
+  onPlanPublished?: () => Promise<void> | void;
 };
 
 const PLAN_TYPE_OPTIONS: { label: string; value: PlanType }[] = [
@@ -78,7 +86,18 @@ const INITIAL_CREATE_WEEK_DRAFT: CreateWeekDraft = {
   notes: '',
 };
 
-export function PlanBuilderShell({ userId, onPlanCreated }: PlanBuilderShellProps) {
+const INITIAL_CREATE_DAY_DRAFT: CreateDayDraft = {
+  title: '',
+  summary: '',
+  notes: '',
+  dayLabel: '',
+};
+
+export function PlanBuilderShell({
+  userId,
+  onPlanCreated,
+  onPlanPublished,
+}: PlanBuilderShellProps) {
   const theme = useTheme();
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
   const [createPlanDraft, setCreatePlanDraft] = useState<CreatePlanDraft>(INITIAL_CREATE_PLAN_DRAFT);
@@ -90,6 +109,13 @@ export function PlanBuilderShell({ userId, onPlanCreated }: PlanBuilderShellProp
   const [createWeekDraft, setCreateWeekDraft] = useState<CreateWeekDraft>(INITIAL_CREATE_WEEK_DRAFT);
   const [isCreateWeekLoading, setIsCreateWeekLoading] = useState(false);
   const [createWeekError, setCreateWeekError] = useState<string | null>(null);
+  const [openWeekDayForms, setOpenWeekDayForms] = useState<Record<string, boolean>>({});
+  const [createDayDrafts, setCreateDayDrafts] = useState<Record<string, CreateDayDraft>>({});
+  const [createdDaysByWeek, setCreatedDaysByWeek] = useState<Record<string, PlanDay[]>>({});
+  const [createDayLoadingWeekKey, setCreateDayLoadingWeekKey] = useState<string | null>(null);
+  const [createDayErrors, setCreateDayErrors] = useState<Record<string, string | null>>({});
+  const [isPublishLoading, setIsPublishLoading] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   function updateCreatePlanDraft<Key extends keyof CreatePlanDraft>(
     key: Key,
@@ -103,6 +129,28 @@ export function PlanBuilderShell({ userId, onPlanCreated }: PlanBuilderShellProp
     value: CreateWeekDraft[Key]
   ) {
     setCreateWeekDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function getWeekKey(week: Pick<PlanWeek, 'planId' | 'weekNumber'>) {
+    return `${week.planId}-${week.weekNumber}`;
+  }
+
+  function getCreateDayDraftForWeek(weekKey: string) {
+    return createDayDrafts[weekKey] ?? INITIAL_CREATE_DAY_DRAFT;
+  }
+
+  function updateCreateDayDraft<Key extends keyof CreateDayDraft>(
+    weekKey: string,
+    key: Key,
+    value: CreateDayDraft[Key]
+  ) {
+    setCreateDayDrafts((current) => ({
+      ...current,
+      [weekKey]: {
+        ...(current[weekKey] ?? INITIAL_CREATE_DAY_DRAFT),
+        [key]: value,
+      },
+    }));
   }
 
   async function handleCreatePlan() {
@@ -141,9 +189,15 @@ export function PlanBuilderShell({ userId, onPlanCreated }: PlanBuilderShellProp
       setCreatedPlan(nextPlan);
       onPlanCreated?.(nextPlan);
       setCreatedWeeks([]);
+      setOpenWeekDayForms({});
+      setCreateDayDrafts({});
+      setCreatedDaysByWeek({});
+      setCreateDayErrors({});
+      setCreateDayLoadingWeekKey(null);
       setIsCreateWeekOpen(false);
       setCreateWeekDraft(INITIAL_CREATE_WEEK_DRAFT);
       setCreateWeekError(null);
+      setPublishError(null);
       setIsCreatePlanOpen(false);
       setCreatePlanDraft(INITIAL_CREATE_PLAN_DRAFT);
     } catch (error) {
@@ -178,13 +232,100 @@ export function PlanBuilderShell({ userId, onPlanCreated }: PlanBuilderShellProp
         notes: createWeekDraft.notes.trim() || undefined,
       });
 
+      const weekKey = getWeekKey(nextWeek);
+
       setCreatedWeeks((current) => [...current, nextWeek]);
+      setOpenWeekDayForms((current) => ({ ...current, [weekKey]: false }));
+      setCreateDayDrafts((current) => ({ ...current, [weekKey]: INITIAL_CREATE_DAY_DRAFT }));
+      setCreatedDaysByWeek((current) => ({ ...current, [weekKey]: [] }));
+      setCreateDayErrors((current) => ({ ...current, [weekKey]: null }));
       setCreateWeekDraft(INITIAL_CREATE_WEEK_DRAFT);
       setIsCreateWeekOpen(false);
+      setPublishError(null);
     } catch (error) {
       setCreateWeekError(error instanceof Error ? error.message : 'Unable to create week.');
     } finally {
       setIsCreateWeekLoading(false);
+    }
+  }
+
+  async function handlePublishPlan() {
+    if (!createdPlan || createdWeeks.length === 0) {
+      setPublishError('Add at least one week before publishing this plan.');
+      return;
+    }
+
+    setIsPublishLoading(true);
+    setPublishError(null);
+
+    try {
+      await publishPlan({
+        planId: createdPlan.planId,
+        userId,
+      });
+
+      await onPlanPublished?.();
+      setCreatedPlan(null);
+      setCreatedWeeks([]);
+      setOpenWeekDayForms({});
+      setCreateDayDrafts({});
+      setCreatedDaysByWeek({});
+      setCreateDayErrors({});
+      setCreateDayLoadingWeekKey(null);
+      setIsCreateWeekOpen(false);
+      setCreateWeekDraft(INITIAL_CREATE_WEEK_DRAFT);
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : 'Unable to publish plan.');
+    } finally {
+      setIsPublishLoading(false);
+    }
+  }
+
+  async function handleCreateDay(week: PlanWeek) {
+    if (!createdPlan) {
+      return;
+    }
+
+    const weekKey = getWeekKey(week);
+    const draft = getCreateDayDraftForWeek(weekKey);
+    const title = draft.title.trim();
+
+    if (!title) {
+      setCreateDayErrors((current) => ({
+        ...current,
+        [weekKey]: 'Add a title before creating a day.',
+      }));
+      return;
+    }
+
+    setCreateDayLoadingWeekKey(weekKey);
+    setCreateDayErrors((current) => ({ ...current, [weekKey]: null }));
+
+    try {
+      const nextDay = await createDay({
+        planId: createdPlan.planId,
+        userId,
+        weekNumber: week.weekNumber,
+        title,
+        summary: draft.summary.trim() || undefined,
+        notes: draft.notes.trim() || undefined,
+        dayLabel: draft.dayLabel.trim() || undefined,
+      });
+
+      setCreatedDaysByWeek((current) => ({
+        ...current,
+        [weekKey]: [...(current[weekKey] ?? []), nextDay],
+      }));
+      setCreateDayDrafts((current) => ({ ...current, [weekKey]: INITIAL_CREATE_DAY_DRAFT }));
+      setOpenWeekDayForms((current) => ({ ...current, [weekKey]: false }));
+      setPublishError(null);
+    } catch (error) {
+      setCreateDayErrors((current) => ({
+        ...current,
+        [weekKey]: error instanceof Error ? error.message : 'Unable to create day.',
+      }));
+    } finally {
+      setCreateDayLoadingWeekKey(null);
     }
   }
 
@@ -325,13 +466,10 @@ export function PlanBuilderShell({ userId, onPlanCreated }: PlanBuilderShellProp
         {createdWeeks.length ? (
           <View style={styles.weekList}>
             {createdWeeks.map((week) => (
-              <ThemedView
-                key={`${week.planId}-${week.weekNumber}-${week.createdAt}`}
-                type="background"
-                style={styles.childCard}>
+              <ThemedView key={`${week.planId}-${week.weekNumber}-${week.createdAt}`} type="background" style={styles.childCard}>
                 <View style={styles.childHeader}>
                   <ThemedText type="smallBold">
-                    Week {week.weekNumber}: {week.title}
+                    Week {week.weekNumber}: {week.title.slice(0, 20) + "..."}
                   </ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     Saved
@@ -343,10 +481,213 @@ export function PlanBuilderShell({ userId, onPlanCreated }: PlanBuilderShellProp
                     {week.notes}
                   </ThemedText>
                 ) : null}
+
+                <View style={styles.nestedSection}>
+                  <View style={styles.childHeader}>
+                    <View style={styles.builderHeaderCopy}>
+                      <ThemedText type="smallBold">Days</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        Create days inside this specific week.
+                      </ThemedText>
+                    </View>
+                    <Pressable
+                      onPress={() =>
+                        setOpenWeekDayForms((current) => ({
+                          ...current,
+                          [getWeekKey(week)]: !current[getWeekKey(week)],
+                        }))
+                      }
+                      style={({ pressed }) => [styles.toggleButton, pressed ? styles.pressed : null]}>
+                      <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                        {openWeekDayForms[getWeekKey(week)] ? 'Hide' : '+ Add Day'}
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+
+                  {openWeekDayForms[getWeekKey(week)] ? (
+                    <View style={styles.formSection}>
+                      <View style={styles.fieldGroup}>
+                        <ThemedText type="smallBold">Day title</ThemedText>
+                        <TextInput
+                          value={getCreateDayDraftForWeek(getWeekKey(week)).title}
+                          onChangeText={(value) =>
+                            updateCreateDayDraft(getWeekKey(week), 'title', value)
+                          }
+                          placeholder="Day 1 Training"
+                          placeholderTextColor={theme.textSecondary}
+                          style={[
+                            styles.textInput,
+                            {
+                              color: theme.text,
+                              borderColor: theme.backgroundSelected,
+                              backgroundColor: theme.background,
+                            },
+                          ]}
+                        />
+                      </View>
+
+                      <View style={styles.fieldGroup}>
+                        <ThemedText type="smallBold">Day label (optional)</ThemedText>
+                        <TextInput
+                          value={getCreateDayDraftForWeek(getWeekKey(week)).dayLabel}
+                          onChangeText={(value) =>
+                            updateCreateDayDraft(getWeekKey(week), 'dayLabel', value)
+                          }
+                          placeholder="Monday"
+                          placeholderTextColor={theme.textSecondary}
+                          style={[
+                            styles.textInput,
+                            {
+                              color: theme.text,
+                              borderColor: theme.backgroundSelected,
+                              backgroundColor: theme.background,
+                            },
+                          ]}
+                        />
+                      </View>
+
+                      <View style={styles.fieldGroup}>
+                        <ThemedText type="smallBold">Day summary (optional)</ThemedText>
+                        <TextInput
+                          value={getCreateDayDraftForWeek(getWeekKey(week)).summary}
+                          onChangeText={(value) =>
+                            updateCreateDayDraft(getWeekKey(week), 'summary', value)
+                          }
+                          placeholder="Outline the focus for this day."
+                          placeholderTextColor={theme.textSecondary}
+                          multiline
+                          style={[
+                            styles.textInput,
+                            styles.multilineInput,
+                            {
+                              color: theme.text,
+                              borderColor: theme.backgroundSelected,
+                              backgroundColor: theme.background,
+                            },
+                          ]}
+                        />
+                      </View>
+
+                      <View style={styles.fieldGroup}>
+                        <ThemedText type="smallBold">Notes (optional)</ThemedText>
+                        <TextInput
+                          value={getCreateDayDraftForWeek(getWeekKey(week)).notes}
+                          onChangeText={(value) =>
+                            updateCreateDayDraft(getWeekKey(week), 'notes', value)
+                          }
+                          placeholder="Any coaching notes for this day."
+                          placeholderTextColor={theme.textSecondary}
+                          multiline
+                          style={[
+                            styles.textInput,
+                            styles.multilineInput,
+                            {
+                              color: theme.text,
+                              borderColor: theme.backgroundSelected,
+                              backgroundColor: theme.background,
+                            },
+                          ]}
+                        />
+                      </View>
+
+                      {createDayErrors[getWeekKey(week)] ? (
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {createDayErrors[getWeekKey(week)]}
+                        </ThemedText>
+                      ) : null}
+
+                      <Pressable
+                        onPress={() => handleCreateDay(week)}
+                        disabled={createDayLoadingWeekKey === getWeekKey(week)}
+                        style={({ pressed }) => [
+                          styles.submitButton,
+                          { backgroundColor: theme.accent },
+                          pressed || createDayLoadingWeekKey === getWeekKey(week)
+                            ? styles.pressed
+                            : null,
+                        ]}>
+                        {createDayLoadingWeekKey === getWeekKey(week) ? (
+                          <ActivityIndicator color="#ffffff" />
+                        ) : (
+                          <ThemedText type="smallBold" style={styles.submitButtonText}>
+                            Create Day
+                          </ThemedText>
+                        )}
+                      </Pressable>
+                    </View>
+                  ) : null}
+
+                  {(createdDaysByWeek[getWeekKey(week)] ?? []).length ? (
+                    <View style={styles.dayList}>
+                      {(createdDaysByWeek[getWeekKey(week)] ?? []).map((day) => (
+                        <ThemedView
+                          key={`${day.planId}-${day.weekNumber}-${day.dayNumber}-${day.createdAt}`}
+                          type="backgroundElement"
+                          style={styles.grandChildCard}>
+                          <View style={styles.childHeader}>
+                            <ThemedText type="smallBold">
+                              Day {day.dayNumber}: {day?.title?.slice(0, 18) + "..." || 'Untitled'}
+                            </ThemedText>
+                            <ThemedText type="small" themeColor="textSecondary">
+                              Saved
+                            </ThemedText>
+                          </View>
+                          {day.dayLabel ? (
+                            <ThemedText type="small" themeColor="textSecondary">
+                              {day.dayLabel}
+                            </ThemedText>
+                          ) : null}
+                          {day.summary ? (
+                            <ThemedText themeColor="textSecondary">{day.summary}</ThemedText>
+                          ) : null}
+                          {day.notes ? (
+                            <ThemedText type="small" themeColor="textSecondary">
+                              {day.notes}
+                            </ThemedText>
+                          ) : null}
+                        </ThemedView>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
               </ThemedView>
             ))}
           </View>
         ) : null}
+
+        <View style={styles.divider} />
+
+        <View style={styles.publishSection}>
+          <View style={styles.builderHeaderCopy}>
+            <ThemedText type="smallBold">Publish</ThemedText>
+            <ThemedText themeColor="textSecondary">
+              Draft plans stay here until published. Add at least one week before publishing.
+            </ThemedText>
+          </View>
+
+          {publishError ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {publishError}
+            </ThemedText>
+          ) : null}
+
+          <Pressable
+            onPress={handlePublishPlan}
+            disabled={isPublishLoading || createdWeeks.length === 0}
+            style={({ pressed }) => [
+              styles.publishButton,
+              { backgroundColor: createdWeeks.length ? theme.accent : theme.backgroundSelected },
+              pressed || isPublishLoading || createdWeeks.length === 0 ? styles.pressed : null,
+            ]}>
+            {isPublishLoading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <ThemedText type="smallBold" style={styles.submitButtonText}>
+                Publish Plan
+              </ThemedText>
+            )}
+          </Pressable>
+        </View>
       </ThemedView>
     );
   }
@@ -631,10 +972,35 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.two,
   },
+  nestedSection: {
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+    paddingTop: Spacing.two,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(127,127,127,0.2)',
+  },
+  dayList: {
+    gap: Spacing.two,
+  },
+  grandChildCard: {
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    gap: Spacing.one,
+  },
   childHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.two,
+  },
+  publishSection: {
+    gap: Spacing.two,
+  },
+  publishButton: {
+    borderRadius: Spacing.three,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
   },
 });

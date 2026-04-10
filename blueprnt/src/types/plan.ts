@@ -47,3 +47,18 @@ export type PlanWeek = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type PlanDay = {
+  PK: string;
+  SK: string;
+  entity: string;
+  planId: string;
+  weekNumber: number;
+  dayNumber: number;
+  title?: string;
+  summary?: string;
+  notes?: string;
+  dayLabel?: string;
+  createdAt: string;
+  updatedAt: string;
+};

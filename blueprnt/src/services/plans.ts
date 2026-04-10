@@ -1,5 +1,5 @@
 import { client } from '@/services/client';
-import type { Plan, PlanDifficulty, PlanGoal, PlanType, PlanWeek } from '@/types';
+import type { Plan, PlanDay, PlanDifficulty, PlanGoal, PlanType, PlanWeek } from '@/types';
 
 type GetPlansResponse = {
   plans: Plan[];
@@ -26,6 +26,21 @@ type CreateWeekInput = {
   notes?: string;
 };
 
+type PublishPlanInput = {
+  planId: string;
+  userId: string;
+};
+
+type CreateDayInput = {
+  planId: string;
+  userId: string;
+  weekNumber: string | number;
+  title: string;
+  summary?: string;
+  notes?: string;
+  dayLabel?: string;
+};
+
 export async function getPlans() {
   const response = await client.get<GetPlansResponse>('/plans');
   return response.plans;
@@ -37,10 +52,21 @@ export async function createPlan({ userId, ...body }: CreatePlanInput) {
 }
 
 export async function createWeek({ planId, ...body }: CreateWeekInput) {
-  console.log("Plan ID: ", planId)
   const response = await client.post<PlanWeek | { week: PlanWeek }>(
     `/plans/${planId}/weeks`,
     body
   );
   return 'week' in response ? response.week : response;
+}
+
+export async function publishPlan({ planId, userId }: PublishPlanInput) {
+  return client.post(`/plan/${planId}/publish`, { userId });
+}
+
+export async function createDay({ planId, weekNumber, ...body }: CreateDayInput) {
+  const response = await client.post<PlanDay | { day: PlanDay }>(
+    `/plans/${planId}/weeks/${weekNumber}/days`,
+    body
+  );
+  return 'day' in response ? response.day : response;
 }
