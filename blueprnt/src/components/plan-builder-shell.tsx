@@ -300,7 +300,6 @@ export function PlanBuilderShell({
     setPublishError(null);
 
     try {
-      console.log("Created Plan: ", createdPlan);
       await publishPlan({
         createdAt: createdPlan.createdAt,
         planId: createdPlan.planId,
