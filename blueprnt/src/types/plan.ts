@@ -62,3 +62,14 @@ export type PlanDay = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type UserPlan = {
+  PK: string;
+  SK: string;
+  entity: 'UserPlan';
+  planId: string;
+  userId: string;
+  title: string;
+  status: PlanStatus;
+  createdAt: string;
+};

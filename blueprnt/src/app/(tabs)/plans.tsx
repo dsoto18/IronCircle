@@ -1,21 +1,20 @@
+import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterChip } from '@/components/filter-chip';
-import { PlanBuilderShell } from '@/components/plan-builder-shell';
 import { PlanCard } from '@/components/plan-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { getPlans } from '@/services/plans';
 import type { Plan, PlanType } from '@/types';
 
 type PlanTypeFilter = 'all' | PlanType;
-
-const TEST_USER_ID = '33fdc5e3-3c0b-4736-ae6d-a296077abe5d';
 
 const PLAN_TYPE_FILTERS: { label: string; value: PlanTypeFilter }[] = [
   { label: 'All', value: 'all' },
@@ -29,30 +28,17 @@ function getPlanListKey(plan: Plan, index: number) {
 }
 
 export default function PlansScreen() {
+  const theme = useTheme();
   const [plans, setPlans] = useState<Awaited<ReturnType<typeof getPlans>>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<PlanTypeFilter>('all');
 
-  async function loadPlans() {
-    try {
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      const nextPlans = await getPlans();
-      setPlans(nextPlans);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to load plans right now.');
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   useEffect(() => {
     let isActive = true;
 
-    async function loadPlansForEffect() {
+    async function loadPlans() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
@@ -79,7 +65,7 @@ export default function PlansScreen() {
       }
     }
 
-    loadPlansForEffect();
+    loadPlans();
 
     return () => {
       isActive = false;
@@ -127,7 +113,7 @@ export default function PlansScreen() {
                 trailingContent={
                   <ThemedText type="small" themeColor="textSecondary">
                     {filteredPlans.length} plans
-                  </ThemedText> 
+                  </ThemedText>
                 }
               />
 
@@ -137,10 +123,30 @@ export default function PlansScreen() {
                 placeholder="Search plans, goals, or creators"
               />
 
-              <PlanBuilderShell
-                userId={TEST_USER_ID}
-                onPlanPublished={loadPlans}
-              />
+              <ThemedView type="backgroundElement" style={styles.launchCard}>
+                <View style={styles.launchCopy}>
+                  <ThemedText type="smallBold">Plan Builder</ThemedText>
+                  <ThemedText themeColor="textSecondary">
+                    Open the dedicated builder page to create draft plans with nested weeks, days, blocks, and items.
+                  </ThemedText>
+                </View>
+
+                <Link href="/plan-builder" asChild>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.launchButton,
+                      {
+                        backgroundColor: theme.backgroundElement,
+                        borderColor: theme.backgroundSelected,
+                      },
+                      pressed ? styles.pressed : null,
+                    ]}>
+                    <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                      Open Builder
+                    </ThemedText>
+                  </Pressable>
+                </Link>
+              </ThemedView>
 
               <ScrollView
                 horizontal
@@ -220,6 +226,25 @@ const styles = StyleSheet.create({
   headerBlock: {
     gap: Spacing.three,
     paddingBottom: Spacing.one,
+  },
+  launchCard: {
+    borderRadius: Spacing.four,
+    padding: Spacing.three,
+    gap: Spacing.three,
+  },
+  launchCopy: {
+    gap: Spacing.one,
+  },
+  launchButton: {
+    borderRadius: Spacing.three,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+  },
+  pressed: {
+    opacity: 0.8,
   },
   chipsContent: {
     gap: Spacing.two,

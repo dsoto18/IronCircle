@@ -1,8 +1,12 @@
 import { client } from '@/services/client';
-import type { Plan, PlanDay, PlanDifficulty, PlanGoal, PlanType, PlanWeek } from '@/types';
+import type { Plan, PlanDay, PlanDifficulty, PlanGoal, PlanType, PlanWeek, UserPlan } from '@/types';
 
 type GetPlansResponse = {
   plans: Plan[];
+};
+
+type GetUserPlansResponse = {
+  Items: UserPlan[];
 };
 
 type CreatePlanInput = {
@@ -44,6 +48,11 @@ type CreateDayInput = {
 export async function getPlans() {
   const response = await client.get<GetPlansResponse>('/plans');
   return response.plans;
+}
+
+export async function getUserPlans(userId: string) {
+  const response = await client.get<GetUserPlansResponse>(`/${userId}/plans`);
+  return response.Items;
 }
 
 export async function createPlan({ userId, ...body }: CreatePlanInput) {

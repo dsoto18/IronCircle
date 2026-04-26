@@ -12,7 +12,7 @@ import { getFeed } from '@/services/feed';
 import { likePost, unlikePost } from '@/services/likes';
 import type { FeedPost } from '@/types';
 
-const TEST_USER_ID = '33fdc5e3-3c0b-4736-ae6d-a296077abe5d'; // change with local data
+const TEST_USER_ID = 'ddffe73e-73b8-4bf0-8b3d-ac86a7583ce2'; // change with local data
 // const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
