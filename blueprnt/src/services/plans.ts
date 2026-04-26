@@ -1,5 +1,14 @@
 import { client } from '@/services/client';
-import type { Plan, PlanDay, PlanDifficulty, PlanGoal, PlanType, PlanWeek, UserPlan } from '@/types';
+import type {
+  FullPlanItem,
+  Plan,
+  PlanDay,
+  PlanDifficulty,
+  PlanGoal,
+  PlanType,
+  PlanWeek,
+  UserPlan,
+} from '@/types';
 
 type GetPlansResponse = {
   plans: Plan[];
@@ -7,6 +16,10 @@ type GetPlansResponse = {
 
 type GetUserPlansResponse = {
   Items: UserPlan[];
+};
+
+type GetFullPlanResponse = {
+  Items: FullPlanItem[];
 };
 
 type CreatePlanInput = {
@@ -33,6 +46,7 @@ type CreateWeekInput = {
 type PublishPlanInput = {
   planId: string;
   userId: string;
+  createdAt: string;
 };
 
 type CreateDayInput = {
@@ -55,6 +69,11 @@ export async function getUserPlans(userId: string) {
   return response.Items;
 }
 
+export async function getFullPlan(planId: string) {
+  const response = await client.get<GetFullPlanResponse>(`/plan/${planId}/full`);
+  return response.Items;
+}
+
 export async function createPlan({ userId, ...body }: CreatePlanInput) {
   const response = await client.post<Plan | { plan: Plan }>(`/${userId}/plans`, body);
   return 'plan' in response ? response.plan : response;
@@ -68,8 +87,8 @@ export async function createWeek({ planId, ...body }: CreateWeekInput) {
   return 'week' in response ? response.week : response;
 }
 
-export async function publishPlan({ planId, userId }: PublishPlanInput) {
-  return client.post(`/plan/${planId}/publish`, { userId });
+export async function publishPlan({ planId, userId, createdAt }: PublishPlanInput) {
+  return client.post(`/plan/${planId}/publish`, { userId, createdAt });
 }
 
 export async function createDay({ planId, weekNumber, ...body }: CreateDayInput) {

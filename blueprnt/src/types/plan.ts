@@ -30,6 +30,7 @@ export type Plan = {
   imageUrl?: string;
   rating?: number;
   enrollmentCount?: number;
+  status?: PlanStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -73,3 +74,14 @@ export type UserPlan = {
   status: PlanStatus;
   createdAt: string;
 };
+
+export type HydratedPlanDraft = {
+  plan: Plan;
+  weeks: PlanWeek[];
+  daysByWeek: Record<string, PlanDay[]>;
+};
+
+export type FullPlanItem =
+  | (Plan & { PK: string; SK: string; entity: 'Plan' })
+  | PlanWeek
+  | PlanDay;

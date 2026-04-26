@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,7 +13,15 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { createDay, createPlan, createWeek, publishPlan } from '@/services/plans';
-import type { Plan, PlanDay, PlanDifficulty, PlanGoal, PlanType, PlanWeek } from '@/types';
+import type {
+  HydratedPlanDraft,
+  Plan,
+  PlanDay,
+  PlanDifficulty,
+  PlanGoal,
+  PlanType,
+  PlanWeek,
+} from '@/types';
 
 type CreatePlanDraft = {
   title: string;
@@ -44,6 +52,7 @@ type PlanBuilderShellProps = {
   userId: string;
   onPlanCreated?: (plan: Plan) => void;
   onPlanPublished?: () => Promise<void> | void;
+  initialDraft?: HydratedPlanDraft | null;
 };
 
 const PLAN_TYPE_OPTIONS: { label: string; value: PlanType }[] = [
@@ -97,6 +106,7 @@ export function PlanBuilderShell({
   userId,
   onPlanCreated,
   onPlanPublished,
+  initialDraft,
 }: PlanBuilderShellProps) {
   const theme = useTheme();
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
@@ -134,6 +144,37 @@ export function PlanBuilderShell({
   function getWeekKey(week: Pick<PlanWeek, 'planId' | 'weekNumber'>) {
     return `${week.planId}-${week.weekNumber}`;
   }
+
+  useEffect(() => {
+    if (!initialDraft) {
+      return;
+    }
+
+    const nextOpenWeekDayForms = Object.fromEntries(
+      initialDraft.weeks.map((week) => [getWeekKey(week), false])
+    );
+    const nextCreateDayDrafts = Object.fromEntries(
+      initialDraft.weeks.map((week) => [getWeekKey(week), INITIAL_CREATE_DAY_DRAFT])
+    );
+    const nextCreateDayErrors = Object.fromEntries(
+      initialDraft.weeks.map((week) => [getWeekKey(week), null])
+    );
+
+    setCreatedPlan(initialDraft.plan);
+    setCreatedWeeks(initialDraft.weeks);
+    setCreatedDaysByWeek(initialDraft.daysByWeek);
+    setOpenWeekDayForms(nextOpenWeekDayForms);
+    setCreateDayDrafts(nextCreateDayDrafts);
+    setCreateDayErrors(nextCreateDayErrors);
+    setCreateDayLoadingWeekKey(null);
+    setIsCreatePlanOpen(false);
+    setCreatePlanDraft(INITIAL_CREATE_PLAN_DRAFT);
+    setCreatePlanError(null);
+    setIsCreateWeekOpen(false);
+    setCreateWeekDraft(INITIAL_CREATE_WEEK_DRAFT);
+    setCreateWeekError(null);
+    setPublishError(null);
+  }, [initialDraft]);
 
   function getCreateDayDraftForWeek(weekKey: string) {
     return createDayDrafts[weekKey] ?? INITIAL_CREATE_DAY_DRAFT;
@@ -259,7 +300,9 @@ export function PlanBuilderShell({
     setPublishError(null);
 
     try {
+      console.log("Created Plan: ", createdPlan);
       await publishPlan({
+        createdAt: createdPlan.createdAt,
         planId: createdPlan.planId,
         userId,
       });

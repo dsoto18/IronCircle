@@ -10,11 +10,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getUserPlans } from '@/services/plans';
-import type { UserPlan } from '@/types';
+import { getFullPlan, getUserPlans } from '@/services/plans';
+import type { FullPlanItem, HydratedPlanDraft, PlanDay, PlanWeek, UserPlan } from '@/types';
 
 const TEST_USER_ID = 'ddffe73e-73b8-4bf0-8b3d-ac86a7583ce2';
 type BuilderView = 'builder' | 'dashboard';
+type FullPlanMeta = Extract<FullPlanItem, { entity: 'Plan' }>;
 
 export default function PlanBuilderScreen() {
   const router = useRouter();
@@ -23,6 +24,9 @@ export default function PlanBuilderScreen() {
   const [userPlans, setUserPlans] = useState<UserPlan[]>([]);
   const [isUserPlansLoading, setIsUserPlansLoading] = useState(false);
   const [userPlansError, setUserPlansError] = useState<string | null>(null);
+  const [activeDraft, setActiveDraft] = useState<HydratedPlanDraft | null>(null);
+  const [openingPlanId, setOpeningPlanId] = useState<string | null>(null);
+  const [openDraftError, setOpenDraftError] = useState<string | null>(null);
 
   function handleBackToPlans() {
     if (router.canGoBack()) {
@@ -74,6 +78,67 @@ export default function PlanBuilderScreen() {
     };
   }, [selectedView]);
 
+  function buildHydratedDraft(items: FullPlanItem[]): HydratedPlanDraft | null {
+    const plan = items.find(
+      (item): item is FullPlanMeta =>
+        item.entity === 'Plan' &&
+        'goal' in item &&
+        'difficulty' in item &&
+        'durationWeeks' in item &&
+        'type' in item
+    );
+
+    if (!plan) {
+      return null;
+    }
+
+    const weeks = items
+      .filter((item): item is PlanWeek => item.entity === 'PlanWeek')
+      .sort((a, b) => a.weekNumber - b.weekNumber);
+
+    const days = items
+      .filter((item): item is PlanDay => item.entity === 'PlanDay')
+      .sort((a, b) => (a.weekNumber - b.weekNumber) || (a.dayNumber - b.dayNumber));
+
+    const daysByWeek = weeks.reduce<Record<string, PlanDay[]>>((acc, week) => {
+      const weekKey = `${week.planId}-${week.weekNumber}`;
+      acc[weekKey] = days.filter((day) => day.weekNumber === week.weekNumber);
+      return acc;
+    }, {});
+
+    return {
+      plan,
+      weeks,
+      daysByWeek,
+    };
+  }
+
+  async function handleOpenDraft(plan: UserPlan) {
+    if (plan.status !== 'draft') {
+      return;
+    }
+
+    setOpeningPlanId(plan.planId);
+    setOpenDraftError(null);
+
+    try {
+      const items = await getFullPlan(plan.planId);
+      const hydratedDraft = buildHydratedDraft(items);
+
+      if (!hydratedDraft) {
+        setOpenDraftError('Could not load that draft plan.');
+        return;
+      }
+
+      setActiveDraft(hydratedDraft);
+      setSelectedView('builder');
+    } catch (error) {
+      setOpenDraftError(error instanceof Error ? error.message : 'Unable to open that draft.');
+    } finally {
+      setOpeningPlanId(null);
+    }
+  }
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -112,6 +177,7 @@ export default function PlanBuilderScreen() {
             <PlanBuilderShell
               userId={TEST_USER_ID}
               onPlanPublished={() => router.replace('/plans')}
+              initialDraft={activeDraft}
             />
           ) : (
             <ThemedView type="backgroundElement" style={styles.dashboardCard}>
@@ -135,6 +201,12 @@ export default function PlanBuilderScreen() {
                 </ThemedText>
               ) : null}
 
+              {openDraftError ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  {openDraftError}
+                </ThemedText>
+              ) : null}
+
               {!isUserPlansLoading && !userPlansError && userPlans.length === 0 ? (
                 <ThemedText themeColor="textSecondary">
                   No plans yet. Create your first draft in the builder tab.
@@ -144,15 +216,24 @@ export default function PlanBuilderScreen() {
               {!isUserPlansLoading && !userPlansError && userPlans.length > 0 ? (
                 <View style={styles.planList}>
                   {userPlans.map((plan) => (
-                    <ThemedView
+                    <Pressable
                       key={`${plan.planId}-${plan.createdAt}`}
-                      type="background"
-                      style={styles.planRow}>
-                      <ThemedText type="smallBold">{plan.title}</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {plan.status}
-                      </ThemedText>
-                    </ThemedView>
+                      onPress={plan.status === 'draft' ? () => handleOpenDraft(plan) : undefined}
+                      disabled={plan.status !== 'draft' || openingPlanId === plan.planId}
+                      style={({ pressed }) => [
+                        pressed && plan.status === 'draft' ? styles.pressed : null,
+                      ]}>
+                      <ThemedView type="background" style={styles.planRow}>
+                        <ThemedText type="smallBold">{plan.title}</ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {plan.status === 'draft'
+                            ? openingPlanId === plan.planId
+                              ? 'Opening draft...'
+                              : 'draft · tap to resume'
+                            : plan.status}
+                        </ThemedText>
+                      </ThemedView>
+                    </Pressable>
                   ))}
                 </View>
               ) : null}

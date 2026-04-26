@@ -19,6 +19,8 @@ Add a first-pass plan creation flow to the app so an author can create a plan sh
 - [x] (2026-04-10 15:03Z) Added `PlanDay` typing, a typed `createDay` service helper, and nested per-week day creation so each week now owns its own inline day form and saved day cards.
 - [x] (2026-04-26 17:45Z) Moved tab routes into a `(tabs)` route group, added a dedicated `plan-builder` screen, and replaced the inline builder on the browse page with a launch card linking to the separate builder flow.
 - [x] (2026-04-26 18:10Z) Added a `My Plans` mode to the dedicated builder page with a typed `getUserPlans` helper and a simple user-specific list of plan titles and statuses.
+- [x] (2026-04-26 18:35Z) Added draft resume support from `My Plans` using `GET /plan/:planId/full`, hydrating saved shell/week/day data back into the builder.
+- [x] (2026-04-26 18:40Z) Preserved the follow-up publish-route contract change so publish requests now include `createdAt` alongside `planId` and `userId`.
 - [x] (2026-04-10 03:05Z) Ran `npx tsc --noEmit` from `blueprnt/`; it completed successfully after the shell-builder slice.
 
 ## Surprises & Discoveries
@@ -31,6 +33,8 @@ Add a first-pass plan creation flow to the app so an author can create a plan sh
   Evidence: `blueprnt/src/types/plan.ts` and `blueprnt/src/mocks/plans.ts` still reference `coverImageUrl`.
 - Observation: The existing `Plans` screen is already the home of plan browsing and is the least disruptive place to stage a V1 builder behind a local toggle.
   Evidence: `blueprnt/src/app/plans.tsx` owns the fetch/filter state for plans and already presents the plan library UI.
+- Observation: Publishing a plan now needs the shell `createdAt` timestamp in addition to `planId` and `userId`.
+  Evidence: The backend uses `createdAt` to update the user-reference record whose key embeds the creation timestamp, and the frontend publish helper now passes that value through.
 
 ## Decision Log
 
@@ -52,6 +56,9 @@ Add a first-pass plan creation flow to the app so an author can create a plan sh
 - Decision: Move the builder off the browse `Plans` tab and into its own screen before adding deeper nodes.
   Rationale: The nested builder now has enough weeks/days complexity that keeping it inline would crowd the discovery experience and make the browse route harder to maintain.
   Date/Author: 2026-04-26 / User + Codex
+- Decision: Preserve the publish request shape that includes `createdAt`.
+  Rationale: The backend publish flow now depends on the shell creation timestamp to locate and update the user-plan reference document correctly, so the frontend must continue sending it.
+  Date/Author: 2026-04-26 / User + Codex
 
 ## Outcomes & Retrospective
 
@@ -60,6 +67,8 @@ Add a first-pass plan creation flow to the app so an author can create a plan sh
 - The first child-node pattern is now established with weeks, which gives the builder a concrete model to repeat for days, blocks, and items.
 - Days now hang off their specific saved week cards instead of being flattened at the plan level, which matches the underlying hierarchy more clearly.
 - The dedicated builder page now also has a lightweight user dashboard mode, which gives the app a place to surface draft and published plans before edit/resume flows are added.
+- Draft plans can now be reopened from `My Plans`, with saved shell/week/day data hydrated back into the current builder.
+- The publish flow now intentionally includes `createdAt` as part of the request contract and should be preserved in future edits.
 - The frontend plan contract now uses `imageUrl`, matching the backend naming more directly.
 - The shell-builder UI is now extracted into its own component, which gives the next incremental slices a cleaner place to add week/day/block/item behavior.
 - The remaining builder work is still open for blocks and items, plus dedicated nested draft types as the tree grows.
@@ -87,6 +96,7 @@ Add a first-pass plan creation flow to the app so an author can create a plan sh
   - `POST /plans/:planId/weeks/:weekNumber/days/:dayNumber/blocks`
   - `POST /plans/:planId/weeks/:weekNumber/days/:dayNumber/blocks/:blockNumber/items`
 - The backend also supports `GET /:userId/plans` for a user-specific list of created plans, now expected to include at least `title` and `status`.
+- The backend also supports `GET /plan/:planId/full` for reconstructing a saved draft from its flat partition items.
 
 ## Plan of Work
 
@@ -135,6 +145,7 @@ Expo launches and the Plans tab links to a dedicated builder screen where an aut
 - Confirm the dedicated builder screen renders the existing nested shell/week/day flow and allows navigating back to `Plans`.
 - Confirm the dedicated builder screen can switch between `Builder` and `My Plans`.
 - Confirm `My Plans` calls `GET /:userId/plans` and renders a simple list of the current user’s plan titles and statuses.
+- Confirm tapping a draft in `My Plans` fetches `GET /plan/:planId/full` and reopens the saved shell/week/day data in the builder view.
 - Confirm the plan shell form requires the expected fields before allowing creation.
 - Confirm `Create Plan` sends `POST /:userId/plans` using the temporary test user id and freezes the submitted shell into a read-only state.
 - Confirm `+ Add Week` appears only after plan creation succeeds and that `Create Week` sends `POST /plans/:planId/weeks`.
@@ -202,6 +213,7 @@ Expo launches and the Plans tab links to a dedicated builder screen where an aut
 - Backend endpoints:
   - `POST /:userId/plans`
   - `GET /:userId/plans`
+  - `GET /plan/:planId/full`
   - `POST /plans/:planId/weeks`
   - `POST /plans/:planId/weeks/:weekNumber/days`
   - `POST /plans/:planId/weeks/:weekNumber/days/:dayNumber/blocks`
