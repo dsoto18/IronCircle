@@ -1,4 +1,4 @@
-export type PlanGoal =
+export type PlanGoal = // matches API rules
   | 'marathon-training'
   | 'muscle-building'
   | 'strength-training'
@@ -11,14 +11,14 @@ export type PlanDifficulty = 'beginner' | 'intermediate' | 'advanced';
 
 export type PlanType = 'workout' | 'meal' | 'hybrid';
 
-export type PlanStatus = 'waiting' | 'started' | 'in-progress' | 'done';
+export type PlanStatus = 'draft' | 'published' | 'archived'; // For creator-facing plan management features
+
+export type ProgressStatus = 'waiting' | 'started' | 'in-progress' | 'done'; // Future use for User-Progress Tracking
 
 export type Plan = {
-  PK: string;
-  SK: string;
-  entity: 'PLAN';
-  creatorId: string;
-  creatorName: string;
+  planId: string;
+  userId: string;
+  creator: string;
   title: string;
   summary: string;
   description?: string;
@@ -27,9 +27,61 @@ export type Plan = {
   durationWeeks: number;
   type: PlanType;
   tags?: string[];
-  coverImageUrl?: string;
-  rating: number;
-  enrollmentCount: number;
+  imageUrl?: string;
+  rating?: number;
+  enrollmentCount?: number;
+  status?: PlanStatus;
   createdAt: string;
   updatedAt: string;
 };
+
+export type PlanWeek = {
+  PK: string;
+  SK: string;
+  entity: 'PlanWeek';
+  planId: string;
+  userId: string;
+  weekNumber: number;
+  title: string;
+  summary: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlanDay = {
+  PK: string;
+  SK: string;
+  entity: string;
+  planId: string;
+  weekNumber: number;
+  dayNumber: number;
+  title?: string;
+  summary?: string;
+  notes?: string;
+  dayLabel?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UserPlan = {
+  PK: string;
+  SK: string;
+  entity: 'UserPlan';
+  planId: string;
+  userId: string;
+  title: string;
+  status: PlanStatus;
+  createdAt: string;
+};
+
+export type HydratedPlanDraft = {
+  plan: Plan;
+  weeks: PlanWeek[];
+  daysByWeek: Record<string, PlanDay[]>;
+};
+
+export type FullPlanItem =
+  | (Plan & { PK: string; SK: string; entity: 'Plan' })
+  | PlanWeek
+  | PlanDay;
