@@ -12,6 +12,7 @@ export default function TabLayout() {
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="create-post" />
         <Stack.Screen name="plan-builder" />
       </Stack>
     </ThemeProvider>

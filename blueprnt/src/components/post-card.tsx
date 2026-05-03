@@ -56,6 +56,7 @@ function getWorkoutTypeColors(type?: FeedPost['post']['type']) {
     case 'hiit':
       return { backgroundColor: '#DCFCE7', textColor: '#15803D' };
     case 'cycle':
+    case 'cycling':
       return { backgroundColor: '#FEF3C7', textColor: '#B45309' };
     case 'walk':
       return { backgroundColor: '#CCFBF1', textColor: '#0F766E' };

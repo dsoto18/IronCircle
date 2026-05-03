@@ -4,12 +4,13 @@ export type WorkoutType =
   | 'Swim'
   | 'Yoga'
   | 'HIIT'
+  | 'Cycling'
   | 'Cycle'
   | 'Walk'
   | 'Mobility'
   | 'Other';
 
-export type PostVisibility = 'private' | 'friends' | 'public';
+export type PostVisibility = 'private' | 'friends' | 'followers' | 'public';
 
 export type Post = {
   PK: string;

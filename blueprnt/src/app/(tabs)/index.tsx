@@ -1,5 +1,7 @@
+import { FontAwesome } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PostCard } from '@/components/post-card';
@@ -7,15 +9,18 @@ import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { mockFeedPosts } from '@/mocks/feed-posts';
 import { getFeed } from '@/services/feed';
 import { likePost, unlikePost } from '@/services/likes';
 import type { FeedPost } from '@/types';
 
-const TEST_USER_ID = 'ddffe73e-73b8-4bf0-8b3d-ac86a7583ce2'; // change with local data
+const TEST_USER_ID = '55919bed-82b2-4868-93e9-7d453d2743db'; // change with local data
 // const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const theme = useTheme();
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -62,6 +67,10 @@ export default function HomeScreen() {
     } finally {
       setLikeLoadingPostIds((current) => current.filter((id) => id !== postId));
     }
+  }
+
+  function handleCreatePostPress() {
+    router.push('/create-post');
   }
 
   useEffect(() => {
@@ -114,6 +123,24 @@ export default function HomeScreen() {
           }
         />
 
+        <Pressable
+          onPress={handleCreatePostPress}
+          style={({ pressed }) => [
+            styles.createPostButton,
+            {
+              backgroundColor: theme.backgroundElement,
+              borderColor: theme.backgroundSelected,
+            },
+            pressed ? styles.pressed : null,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Create post">
+          <FontAwesome name="plus" size={14} color={theme.accent} />
+          <ThemedText type="smallBold" style={{ color: theme.accent }}>
+            Create Post
+          </ThemedText>
+        </Pressable>
+
         {isLoading ? (
           <View style={styles.stateContainer}>
             <ThemedText themeColor="textSecondary">Loading your feed...</ThemedText>
@@ -161,6 +188,20 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.four,
     gap: Spacing.three,
+  },
+  createPostButton: {
+    minHeight: 48,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    marginTop: Spacing.three,
+    borderWidth: 1,
+  },
+  pressed: {
+    opacity: 0.8,
   },
   stateContainer: {
     paddingBottom: Spacing.two,
