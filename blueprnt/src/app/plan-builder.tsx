@@ -13,7 +13,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { getFullPlan, getUserPlans } from '@/services/plans';
 import type { FullPlanItem, HydratedPlanDraft, PlanDay, PlanWeek, UserPlan } from '@/types';
 
-const TEST_USER_ID = 'ddffe73e-73b8-4bf0-8b3d-ac86a7583ce2';
+const TEST_USER_ID = '55919bed-82b2-4868-93e9-7d453d2743db';
 type BuilderView = 'builder' | 'dashboard';
 type FullPlanMeta = Extract<FullPlanItem, { entity: 'Plan' }>;
 

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PostCard } from '@/components/post-card';
@@ -7,15 +9,18 @@ import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { mockFeedPosts } from '@/mocks/feed-posts';
 import { getFeed } from '@/services/feed';
 import { likePost, unlikePost } from '@/services/likes';
 import type { FeedPost } from '@/types';
 
-const TEST_USER_ID = 'ddffe73e-73b8-4bf0-8b3d-ac86a7583ce2'; // change with local data
+const TEST_USER_ID = '55919bed-82b2-4868-93e9-7d453d2743db'; // change with local data
 // const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const theme = useTheme();
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -64,42 +69,48 @@ export default function HomeScreen() {
     }
   }
 
-  useEffect(() => {
-    let isMounted = true;
+  function handleCreatePostPress() {
+    router.push('/create-post');
+  }
 
-    async function loadFeed() {
-      try {
-        setIsLoading(true);
-        setErrorMessage(null);
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
 
-        const data = await getFeed(TEST_USER_ID);
+      async function loadFeed() {
+        try {
+          setIsLoading(true);
+          setErrorMessage(null);
 
-        if (!isMounted) {
-          return;
-        }
+          const data = await getFeed(TEST_USER_ID);
 
-        setFeedPosts(data);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
+          if (!isMounted) {
+            return;
+          }
 
-        console.error('Failed to load home feed', error);
-        setErrorMessage('Could not load your feed. Showing mock data instead.');
-        setFeedPosts(mockFeedPosts);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
+          setFeedPosts(data);
+        } catch (error) {
+          if (!isMounted) {
+            return;
+          }
+
+          console.error('Failed to load home feed', error);
+          setErrorMessage('Could not load your feed. Showing mock data instead.');
+          setFeedPosts(mockFeedPosts);
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
       }
-    }
 
-    loadFeed();
+      loadFeed();
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -108,9 +119,28 @@ export default function HomeScreen() {
           eyebrow="Blueprnt"
           title="Checkout Your Circle&apos;s Activity"
           trailingContent={
-            <ThemedText type="small" themeColor="textSecondary">
-              {feedPosts.length} posts
-            </ThemedText>
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={handleCreatePostPress}
+                style={({ pressed }) => [
+                  styles.createPostButton,
+                  {
+                    backgroundColor: theme.backgroundElement,
+                    borderColor: theme.backgroundSelected,
+                  },
+                  pressed ? styles.pressed : null,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Create post">
+                <FontAwesome name="plus" size={12} color={theme.accent} />
+                <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                  Create
+                </ThemedText>
+              </Pressable>
+              <ThemedText type="small" themeColor="textSecondary">
+                {feedPosts.length} posts
+              </ThemedText>
+            </View>
           }
         />
 
@@ -161,6 +191,24 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.four,
     gap: Spacing.three,
+  },
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: Spacing.one,
+  },
+  createPostButton: {
+    minHeight: 34,
+    borderRadius: Spacing.five,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  pressed: {
+    opacity: 0.8,
   },
   stateContainer: {
     paddingBottom: Spacing.two,
