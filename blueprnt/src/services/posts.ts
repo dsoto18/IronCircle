@@ -1,5 +1,5 @@
 import { client } from '@/services/client';
-import type { Post, PostVisibility } from '@/types';
+import type { Post } from '@/types';
 
 export const POST_TYPES = ['Run', 'Lift', 'Yoga', 'Swim', 'Cycling', 'HIIT'] as const;
 
@@ -15,17 +15,50 @@ export type CreatePostInput = {
   caption: string;
 };
 
-type CreatePostBody = Omit<CreatePostInput, 'userId'> & {
-  visibility: Extract<PostVisibility, 'followers'>;
-};
-
 type CreatePostResponse = Post | { post: Post };
 
-export async function createPost({ userId, ...input }: CreatePostInput) {
-  const body: CreatePostBody = {
-    ...input,
+function normalizeOptionalMetric(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const numericValue = Number(trimmedValue);
+
+  if (Number.isFinite(numericValue) && numericValue === 0) {
+    return null;
+  }
+
+  return trimmedValue;
+}
+
+export async function createPost({
+  userId,
+  type,
+  distance,
+  calories,
+  duration,
+  imageUrl,
+  caption,
+}: CreatePostInput) {
+  const body: Record<string, string> = {
+    type,
+    duration: duration.trim(),
+    imageUrl: imageUrl.trim(),
+    caption: caption.trim(),
     visibility: 'followers',
   };
+  const normalizedDistance = normalizeOptionalMetric(distance);
+  const normalizedCalories = normalizeOptionalMetric(calories);
+
+  if (normalizedDistance !== null) {
+    body.distance = normalizedDistance;
+  }
+
+  if (normalizedCalories !== null) {
+    body.calories = normalizedCalories;
+  }
 
   const response = await client.post<CreatePostResponse>(`/${userId}/posts`, body);
 

@@ -15,6 +15,7 @@ Add a simple create-post entry point from the Home tab and a dedicated Expo Rout
 - [x] (2026-05-03 23:41Z) Ran `npx tsc --noEmit` from `blueprnt/`; it completed successfully.
 - [x] (2026-05-03 23:43Z) Attempted to start Expo with `npm run start -- --port 8081`; the process did not open a local listener in this sandbox, so it was stopped.
 - [x] (2026-05-03 23:48Z) Replaced the Home `Link asChild` create-post control with a direct `Pressable` plus `router.push('/create-post')` and explicit visible button styling after the tap target appeared invisible in-app.
+- [x] (2026-05-03 23:57Z) Updated `createPost` to omit blank or zero `distance` and `calories`, and changed Home feed loading to refresh on screen focus.
 
 ## Surprises & Discoveries
 
@@ -41,12 +42,20 @@ Add a simple create-post entry point from the Home tab and a dedicated Expo Rout
 - Decision: Use `useRouter().push('/create-post')` from a normal `Pressable` on Home instead of `Link asChild`.
   Rationale: The button needs to render as an explicit visible native control, and the previous link wrapper produced a tappable area whose contents were not visible in the user's app.
   Date/Author: 2026-05-03 / Codex
+- Decision: Normalize optional metric payload fields in `blueprnt/src/services/posts.ts`.
+  Rationale: Keeping blank/zero omission in the service ensures all create-post callers avoid sending unwanted `distance` or `calories` values, rather than relying on a single form screen to remember that rule.
+  Date/Author: 2026-05-03 / Codex
+- Decision: Refresh the Home feed with `useFocusEffect` instead of manually passing a refresh flag after post creation.
+  Rationale: The feed should reload whenever the user returns to Home, including after create-post navigation, without adding route params or shared state.
+  Date/Author: 2026-05-03 / Codex
 
 ## Outcomes & Retrospective
 
 - The Home tab now includes a `Create Post` button that opens `/create-post`.
 - The create-post screen lets the user pick `Run`, `Lift`, `Yoga`, `Swim`, `Cycling`, or `HIIT`, enter caption/metrics/image URL, and submit while disabling duplicate requests.
 - `blueprnt/src/services/posts.ts` posts to `POST /:userId/posts` and injects `visibility: "followers"` into the request body.
+- Blank or zero `distance` and `calories` values are omitted from the create-post request body.
+- The Home feed reloads when the screen regains focus, so returning from a successful create-post flow fetches the latest feed.
 - TypeScript validation passes locally. Expo/manual runtime validation against a live backend remains the main follow-up check because the sandboxed `expo start` attempt did not open a reachable local listener.
 
 ## Context and Orientation

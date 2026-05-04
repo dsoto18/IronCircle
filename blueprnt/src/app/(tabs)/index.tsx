@@ -1,6 +1,6 @@
 import { FontAwesome } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -73,42 +73,44 @@ export default function HomeScreen() {
     router.push('/create-post');
   }
 
-  useEffect(() => {
-    let isMounted = true;
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
 
-    async function loadFeed() {
-      try {
-        setIsLoading(true);
-        setErrorMessage(null);
+      async function loadFeed() {
+        try {
+          setIsLoading(true);
+          setErrorMessage(null);
 
-        const data = await getFeed(TEST_USER_ID);
+          const data = await getFeed(TEST_USER_ID);
 
-        if (!isMounted) {
-          return;
-        }
+          if (!isMounted) {
+            return;
+          }
 
-        setFeedPosts(data);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
+          setFeedPosts(data);
+        } catch (error) {
+          if (!isMounted) {
+            return;
+          }
 
-        console.error('Failed to load home feed', error);
-        setErrorMessage('Could not load your feed. Showing mock data instead.');
-        setFeedPosts(mockFeedPosts);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
+          console.error('Failed to load home feed', error);
+          setErrorMessage('Could not load your feed. Showing mock data instead.');
+          setFeedPosts(mockFeedPosts);
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
       }
-    }
 
-    loadFeed();
+      loadFeed();
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   return (
     <ThemedView style={styles.container}>
