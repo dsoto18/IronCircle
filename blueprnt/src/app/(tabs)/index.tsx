@@ -119,29 +119,30 @@ export default function HomeScreen() {
           eyebrow="Blueprnt"
           title="Checkout Your Circle&apos;s Activity"
           trailingContent={
-            <ThemedText type="small" themeColor="textSecondary">
-              {feedPosts.length} posts
-            </ThemedText>
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={handleCreatePostPress}
+                style={({ pressed }) => [
+                  styles.createPostButton,
+                  {
+                    backgroundColor: theme.backgroundElement,
+                    borderColor: theme.backgroundSelected,
+                  },
+                  pressed ? styles.pressed : null,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Create post">
+                <FontAwesome name="plus" size={12} color={theme.accent} />
+                <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                  Create
+                </ThemedText>
+              </Pressable>
+              <ThemedText type="small" themeColor="textSecondary">
+                {feedPosts.length} posts
+              </ThemedText>
+            </View>
           }
         />
-
-        <Pressable
-          onPress={handleCreatePostPress}
-          style={({ pressed }) => [
-            styles.createPostButton,
-            {
-              backgroundColor: theme.backgroundElement,
-              borderColor: theme.backgroundSelected,
-            },
-            pressed ? styles.pressed : null,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Create post">
-          <FontAwesome name="plus" size={14} color={theme.accent} />
-          <ThemedText type="smallBold" style={{ color: theme.accent }}>
-            Create Post
-          </ThemedText>
-        </Pressable>
 
         {isLoading ? (
           <View style={styles.stateContainer}>
@@ -191,15 +192,19 @@ const styles = StyleSheet.create({
     paddingBottom: BottomTabInset + Spacing.four,
     gap: Spacing.three,
   },
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: Spacing.one,
+  },
   createPostButton: {
-    minHeight: 48,
-    borderRadius: Spacing.three,
+    minHeight: 34,
+    borderRadius: Spacing.five,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    marginTop: Spacing.three,
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 6,
     borderWidth: 1,
   },
   pressed: {
