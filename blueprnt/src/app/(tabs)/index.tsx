@@ -4,6 +4,9 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { logout } from '@/auth/authService';
+import { Button } from 'react-native';
+
 import { PostCard } from '@/components/post-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
@@ -15,7 +18,7 @@ import { getFeed } from '@/services/feed';
 import { likePost, unlikePost } from '@/services/likes';
 import type { FeedPost } from '@/types';
 
-const TEST_USER_ID = '55919bed-82b2-4868-93e9-7d453d2743db'; // change with local data
+const TEST_USER_ID = '906d95c7-877a-4d5d-ba52-6c6d3bd6f533'; // change with local data
 // const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
@@ -137,6 +140,13 @@ export default function HomeScreen() {
                   Create
                 </ThemedText>
               </Pressable>
+              <Button
+                title="Sign out"
+                onPress={async () => {
+                  await logout();
+                  router.replace('/auth/login');
+                }}
+              />
               <ThemedText type="small" themeColor="textSecondary">
                 {feedPosts.length} posts
               </ThemedText>

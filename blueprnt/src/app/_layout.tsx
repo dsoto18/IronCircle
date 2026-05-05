@@ -18,12 +18,17 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
-      <AuthGate />
-      {/* <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="create-post" />
-        <Stack.Screen name="plan-builder" />
-      </Stack> */}
+      <AuthGate>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="auth/login" />
+          <Stack.Screen name="auth/register" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="create-post" />
+          <Stack.Screen name="plan-builder" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="auth/confirm" />
+        </Stack>
+      </AuthGate>
     </ThemeProvider>
   );
 }

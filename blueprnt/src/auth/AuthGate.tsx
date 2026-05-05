@@ -1,24 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Stack } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { getCurrentUser, AuthUser } from 'aws-amplify/auth';
 
-export default function AuthGate() {
+export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const segments = useSegments();
 
   useEffect(() => {
     checkUser();
   }, []);
 
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+
+    if (!user && !inAuthGroup) {
+      // router.replace('/auth/login');
+      confirmLoggedOutBeforeRedirect();
+    }
+
+    // if (user && inAuthGroup) {
+    //   router.replace('/(tabs)');
+    // }
+  }, [user, loading, segments]);
+
   async function checkUser() {
     try {
       const currentUser = await getCurrentUser();
+      console.log('Current user:', currentUser);
       setUser(currentUser);
     } catch (err) {
+      console.log('No user signed in');
       setUser(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   if (loading) {
@@ -29,21 +48,15 @@ export default function AuthGate() {
     );
   }
 
-  // NOT logged in → show auth screens
-  if (!user) {
-    return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="auth/login" />
-        <Stack.Screen name="auth/register" />
-      </Stack>
-    );
+  async function confirmLoggedOutBeforeRedirect() {
+    try {
+      const currentUser = await getCurrentUser();
+      console.log('Confirmed user after route change:', currentUser);
+      setUser(currentUser);
+    } catch {
+      router.replace('/auth/login');
+    }
   }
 
-  // logged in → show app
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="plan-builder" />
-    </Stack>
-  );
+  return <>{children}</>;
 }

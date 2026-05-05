@@ -1,4 +1,4 @@
-import { signUp, signIn, getCurrentUser, signOut } from 'aws-amplify/auth';
+import { signUp, signIn, getCurrentUser, signOut, confirmSignUp, autoSignIn } from 'aws-amplify/auth';
 
 export async function register(email: string, password: string) {
   return await signUp({
@@ -7,7 +7,8 @@ export async function register(email: string, password: string) {
     options: {
       userAttributes: {
         email
-      }
+      },
+      autoSignIn: true,
     }
   });
 }
@@ -25,4 +26,13 @@ export async function getUser() {
 
 export async function logout() {
   return await signOut();
+}
+
+export async function confirmRegistration(email: string, code: string) {
+  await confirmSignUp({
+    username: email,
+    confirmationCode: code,
+  });
+
+  return await autoSignIn();
 }
