@@ -34,5 +34,10 @@ export async function confirmRegistration(email: string, code: string) {
     confirmationCode: code,
   });
 
-  return await autoSignIn();
+  try {
+    return await autoSignIn();
+  } catch (err) {
+    // Auto sign-in unavailable after confirmation
+    return null;
+  }
 }

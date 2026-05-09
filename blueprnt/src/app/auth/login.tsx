@@ -23,9 +23,17 @@ export default function Login() {
 
     try {
       const result = await login(email.trim(), password);
-      console.log('Login successful:', result);
-      if (!result) {
-        throw new Error('Login failed');
+
+      if (!result.isSignedIn) {
+        if(result.nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
+          router.replace({
+            pathname: '/auth/confirm',
+            params: { email: email.trim() },
+          });
+          return;
+        }
+        setError('Login could not be completed. Please try again.');
+        return;
       }
 
       const me = await getMe();
@@ -35,8 +43,6 @@ export default function Login() {
         router.replace('/(tabs)');
       }
     } catch (err: any) {
-      console.log(err);
-
       if(
         err?.name === 'UserNotConfirmedException' ||
         err?.message?.includes('User is not confirmed')
@@ -48,6 +54,10 @@ export default function Login() {
         return;
       }
       
+      if(err?.message === 'Missing auth token') {
+        setError('Please verify your email before loggin in.');
+        return;
+      }
       
       setError(err?.message || 'Unable to log in');
     }

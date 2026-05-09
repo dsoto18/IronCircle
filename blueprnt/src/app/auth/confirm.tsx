@@ -39,17 +39,25 @@ const email = emailInput.trim();
     }
 
     try {
-      await confirmRegistration(email, code.trim());
+      const result = await confirmRegistration(email, code.trim());
 
-      const me = await getMe();
+      if(result?.isSignedIn){
+        const me = await getMe();
+        
+        if (me.needsOnboarding) {
+          router.replace('/onboarding');
+        } else {
+          router.replace('/(tabs)');
+        }
 
-      if (me.needsOnboarding) {
-        router.replace('/onboarding');
-      } else {
-        router.replace('/(tabs)');
+        return;
       }
+
+      // delayed cofirm workflow (user closed the app on confirm step)
+      setMessage('Account confirmed. Please log in.');
+      router.replace('/auth/login');
+
     } catch (err: any) {
-      console.log(err);
       setError(err?.message || 'Unable to confirm account');
     }
   }
@@ -65,9 +73,8 @@ const email = emailInput.trim();
 
     try {
       await resendSignUpCode({ username: email });
-      setMessage('Confirmation code resent. Check your email.');
+      setMessage('Confirmation code resent. Check your email. If you have an account, the code will arrive shortly.');
     } catch (err: any) {
-      console.log(err);
       setError(err?.message || 'Unable to resend confirmation code');
     }
   }

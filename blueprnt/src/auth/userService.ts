@@ -16,13 +16,11 @@ export async function getMe() {
       Authorization: `Bearer ${token}`,
     },
   });
+
   const body = await res.json().catch(() => null);
 
-  console.log("GET ME STATUS: ", res.status)
-  console.log("GET ME BODY: ", body)
-
   if (res.status === 404) {
-    console.log('User not found, needs onboarding');
+    // User not found, needs onboarding
     return { needsOnboarding: true };
   }
 

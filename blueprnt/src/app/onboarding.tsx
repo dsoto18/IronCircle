@@ -62,7 +62,6 @@ export default function Onboarding() {
 
       router.replace('/(tabs)');
     } catch (err: any) {
-      console.log(err);
       setError(err?.message || 'Unable to complete onboarding');
     }
   }

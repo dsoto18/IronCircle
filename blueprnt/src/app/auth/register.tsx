@@ -51,7 +51,6 @@ export default function Register() {
         });
       }, 1500);
     } catch (err: any) {
-      console.log(err);
       setError(err?.message || 'Unable to create account');
     }
   }
