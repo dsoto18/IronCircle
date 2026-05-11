@@ -13,7 +13,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { getFullPlan, getUserPlans } from '@/services/plans';
 import type { FullPlanItem, HydratedPlanDraft, PlanDay, PlanWeek, UserPlan } from '@/types';
 
-const TEST_USER_ID = '55919bed-82b2-4868-93e9-7d453d2743db';
 type BuilderView = 'builder' | 'dashboard';
 type FullPlanMeta = Extract<FullPlanItem, { entity: 'Plan' }>;
 
@@ -49,7 +48,7 @@ export default function PlanBuilderScreen() {
         setIsUserPlansLoading(true);
         setUserPlansError(null);
 
-        const nextPlans = await getUserPlans(TEST_USER_ID);
+        const nextPlans = await getUserPlans();
 
         if (!isActive) {
           return;
@@ -175,7 +174,6 @@ export default function PlanBuilderScreen() {
 
           {selectedView === 'builder' ? (
             <PlanBuilderShell
-              userId={TEST_USER_ID}
               onPlanPublished={() => router.replace('/plans')}
               initialDraft={activeDraft}
             />

@@ -1,6 +1,9 @@
+import { getAuthHeaders } from '@/services/authSession';
 import { client } from '@/services/client';
 import type { FeedPost } from '@/types';
 
-export function getFeed(userId: string) {
-  return client.get<FeedPost[]>(`/feed/${userId}`);
+export async function getFeed() {
+  return client.get<FeedPost[]>('/feed', {
+    headers: await getAuthHeaders('accessToken'),
+  });
 }

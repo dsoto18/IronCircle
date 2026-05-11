@@ -1,15 +1,20 @@
+import { getAuthHeaders } from '@/services/authSession';
 import { client } from '@/services/client';
 
 export type LikePostPayload = {
-  userId: string;
   author: string;
   createdAt: string;
 };
 
-export function likePost(postId: string, body: LikePostPayload) {
-  return client.post(`/likes/${postId}`, body);
+export async function likePost(postId: string, body: LikePostPayload) {
+  return client.post(`/likes/${postId}`, body, {
+    headers: await getAuthHeaders('accessToken'),
+  });
 }
 
-export function unlikePost(postId: string, body: LikePostPayload) {
-  return client.delete(`/likes/${postId}`, { body });
+export async function unlikePost(postId: string, body: LikePostPayload) {
+  return client.delete(`/likes/${postId}`, {
+    body,
+    headers: await getAuthHeaders('accessToken'),
+  });
 }

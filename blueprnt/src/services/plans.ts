@@ -1,3 +1,4 @@
+import { getAuthHeaders, getCurrentUserId } from '@/services/authSession';
 import { client } from '@/services/client';
 import type {
   FullPlanItem,
@@ -23,7 +24,6 @@ type GetFullPlanResponse = {
 };
 
 type CreatePlanInput = {
-  userId: string;
   title: string;
   summary: string;
   description?: string;
@@ -37,7 +37,6 @@ type CreatePlanInput = {
 
 type CreateWeekInput = {
   planId: string;
-  userId: string;
   title: string;
   summary: string;
   notes?: string;
@@ -45,13 +44,11 @@ type CreateWeekInput = {
 
 type PublishPlanInput = {
   planId: string;
-  userId: string;
   createdAt: string;
 };
 
 type CreateDayInput = {
   planId: string;
-  userId: string;
   weekNumber: string | number;
   title: string;
   summary?: string;
@@ -64,37 +61,58 @@ export async function getPlans() {
   return response.plans;
 }
 
-export async function getUserPlans(userId: string) {
-  const response = await client.get<GetUserPlansResponse>(`/${userId}/plans`);
+export async function getUserPlans() {
+  const userId = await getCurrentUserId();
+  console.log(`/${userId}/plans`)
+  const response = await client.get<GetUserPlansResponse>(`/${userId}/plans`, {
+    headers: await getAuthHeaders('accessToken'),
+  });
   return response.Items;
 }
 
 export async function getFullPlan(planId: string) {
-  const response = await client.get<GetFullPlanResponse>(`/plan/${planId}/full`);
+  const response = await client.get<GetFullPlanResponse>(`/plan/${planId}/full`, {
+    headers: await getAuthHeaders('accessToken'),
+  });
   return response.Items;
 }
 
-export async function createPlan({ userId, ...body }: CreatePlanInput) {
-  const response = await client.post<Plan | { plan: Plan }>(`/${userId}/plans`, body);
+export async function createPlan(body: CreatePlanInput) {
+  const userId = await getCurrentUserId();
+  const response = await client.post<Plan | { plan: Plan }>(`/plans`, body, {
+    headers: await getAuthHeaders('accessToken'),
+  });
   return 'plan' in response ? response.plan : response;
 }
 
 export async function createWeek({ planId, ...body }: CreateWeekInput) {
   const response = await client.post<PlanWeek | { week: PlanWeek }>(
     `/plans/${planId}/weeks`,
-    body
+    body,
+    {
+      headers: await getAuthHeaders('accessToken'),
+    }
   );
   return 'week' in response ? response.week : response;
 }
 
-export async function publishPlan({ planId, userId, createdAt }: PublishPlanInput) {
-  return client.post(`/plan/${planId}/publish`, { userId, createdAt });
+export async function publishPlan({ planId, createdAt }: PublishPlanInput) {
+  return client.post(
+    `/plan/${planId}/publish`,
+    { createdAt },
+    {
+      headers: await getAuthHeaders('accessToken'),
+    }
+  );
 }
 
 export async function createDay({ planId, weekNumber, ...body }: CreateDayInput) {
   const response = await client.post<PlanDay | { day: PlanDay }>(
     `/plans/${planId}/weeks/${weekNumber}/days`,
-    body
+    body,
+    {
+      headers: await getAuthHeaders('accessToken'),
+    }
   );
   return 'day' in response ? response.day : response;
 }
