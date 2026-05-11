@@ -23,7 +23,6 @@ export default function CurrentUserProfileRoute() {
         setErrorMessage(null);
 
         const currentUserResult = await getMe();
-        console.log('Current user result', currentUserResult);
 
         if (!isMounted) {
           return;
@@ -35,17 +34,12 @@ export default function CurrentUserProfileRoute() {
           return;
         }
 
-        console.log("Setting user");
         setUser(currentUserResult.user);
-        console.log("User set.")
 
         const [followers, following] = await Promise.all([
           getUserFollowers(currentUserResult.user.userId),
           getUserFollowing(currentUserResult.user.userId),
         ]);
-
-        console.log('Followers', followers);
-        console.log('Following', following);
 
         if (!isMounted) {
           return;

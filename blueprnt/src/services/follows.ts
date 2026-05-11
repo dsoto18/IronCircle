@@ -6,12 +6,10 @@ function encodePathSegment(value: string) {
 }
 
 export async function getUserFollowers(userId: string) {
-  console.log('Getting followers for user', userId);
   const response = await client.get<any>(
     `/users/${encodePathSegment(userId)}/followers`
   );
 
-  console.log('Raw followers response', response);
   return response.Items;
   // return unwrapUserList(response, 'followers');
 }

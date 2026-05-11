@@ -89,11 +89,7 @@ export async function createCurrentUser(input: CreateCurrentUserInput) {
 
 export async function getUserProfile(user: string) {
   try {
-    console.log('Getting profile for user', user);
     const response = await client.get<any>(`/users/${encodePathSegment(user)}`);
-
-    // return unwrapUserResponse(response);
-    console.log('Raw user profile response', response);
     return response;
   } catch (error) {
     if (error instanceof ApiError) {

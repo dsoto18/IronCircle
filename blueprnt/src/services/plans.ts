@@ -63,7 +63,6 @@ export async function getPlans() {
 
 export async function getUserPlans() {
   const userId = await getCurrentUserId();
-  console.log(`/${userId}/plans`)
   const response = await client.get<GetUserPlansResponse>(`/${userId}/plans`, {
     headers: await getAuthHeaders('accessToken'),
   });
