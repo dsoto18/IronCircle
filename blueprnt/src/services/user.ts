@@ -20,6 +20,10 @@ type GetMeResponse = {
 
 type CreateCurrentUserResponse = User | { user: User };
 
+function encodePathSegment(value: string) {
+  return encodeURIComponent(value);
+}
+
 function getApiErrorMessage(error: ApiError) {
   if (
     error.data &&
@@ -77,6 +81,23 @@ export async function createCurrentUser(input: CreateCurrentUserInput) {
   } catch (error) {
     if (error instanceof ApiError) {
       throw new Error(getApiErrorMessage(error) ?? 'Unable to complete onboarding');
+    }
+
+    throw error;
+  }
+}
+
+export async function getUserProfile(user: string) {
+  try {
+    console.log('Getting profile for user', user);
+    const response = await client.get<any>(`/users/${encodePathSegment(user)}`);
+
+    // return unwrapUserResponse(response);
+    console.log('Raw user profile response', response);
+    return response;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new Error(getApiErrorMessage(error) ?? 'Unable to load user profile');
     }
 
     throw error;

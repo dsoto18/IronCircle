@@ -3,6 +3,7 @@ export type EntityType = 'USER' | 'POST' | 'PLAN';
 export type User = {
   PK: string;
   SK: string;
+  userId: string;
   entity: 'USER';
   firstName: string;
   lastName: string;
