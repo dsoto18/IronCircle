@@ -13,7 +13,6 @@ import { confirmRegistration, resendRegistrationCode } from '@/auth/authService'
 import { getMe } from '@/services/user';
 
 export default function Confirm() {
-  //   const { email } = useLocalSearchParams<{ email: string }>();
   const params = useLocalSearchParams<{ email?: string }>();
   const [emailInput, setEmailInput] = useState(params.email ?? '');
 
