@@ -12,6 +12,7 @@ import type { FeedPost } from '@/types';
 type PostCardProps = {
   item: FeedPost;
   isLikeLoading?: boolean;
+  onAuthorPress?: (item: FeedPost) => void;
   onToggleLike?: (item: FeedPost) => void;
 };
 
@@ -99,7 +100,12 @@ function parseMetricValue(value?: string | number) {
   return null;
 }
 
-export function PostCard({ item, isLikeLoading = false, onToggleLike }: PostCardProps) {
+export function PostCard({
+  item,
+  isLikeLoading = false,
+  onAuthorPress,
+  onToggleLike,
+}: PostCardProps) {
   const theme = useTheme();
   const { author, post } = item;
   const [cardWidth, setCardWidth] = useState(0);
@@ -137,7 +143,17 @@ export function PostCard({ item, isLikeLoading = false, onToggleLike }: PostCard
         contentContainerStyle={styles.pages}>
         <View style={[styles.page, cardWidth > 0 ? { width: cardWidth } : null]}>
           <View style={styles.header}>
-            <View style={styles.headerMain}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.headerMain,
+                pressed && onAuthorPress ? styles.authorPressed : null,
+              ]}
+              onPress={() => onAuthorPress?.(item)}
+              disabled={!onAuthorPress}
+              accessibilityRole={onAuthorPress ? 'button' : undefined}
+              accessibilityLabel={
+                onAuthorPress ? `View ${author.username}'s profile` : undefined
+              }>
               {author.profilePictureUrl ? (
                 <Image source={author.profilePictureUrl} style={styles.avatar} contentFit="cover" />
               ) : (
@@ -163,7 +179,7 @@ export function PostCard({ item, isLikeLoading = false, onToggleLike }: PostCard
                   {formatPostTime(post.createdAt)}
                 </ThemedText>
               </View>
-            </View>
+            </Pressable>
 
             {formattedType ? (
               <View style={[styles.typePill, { backgroundColor: workoutTypeColors.backgroundColor }]}>
@@ -254,6 +270,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  authorPressed: {
+    opacity: 0.72,
   },
   avatar: {
     width: 44,

@@ -71,6 +71,17 @@ export default function HomeScreen() {
     router.push('/create-post');
   }
 
+  function handleProfilePress() {
+    router.push('/profile');
+  }
+
+  function handleAuthorPress(item: FeedPost) {
+    router.push({
+      pathname: '/profile/[userId]',
+      params: { userId: item.author.userId },
+    });
+  }
+
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
@@ -118,23 +129,39 @@ export default function HomeScreen() {
           title="Checkout Your Circle&apos;s Activity"
           trailingContent={
             <View style={styles.headerActions}>
-              <Pressable
-                onPress={handleCreatePostPress}
-                style={({ pressed }) => [
-                  styles.createPostButton,
-                  {
-                    backgroundColor: theme.backgroundElement,
-                    borderColor: theme.backgroundSelected,
-                  },
-                  pressed ? styles.pressed : null,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Create post">
-                <FontAwesome name="plus" size={12} color={theme.accent} />
-                <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                  Create
-                </ThemedText>
-              </Pressable>
+              <View style={styles.headerButtonRow}>
+                <Pressable
+                  onPress={handleCreatePostPress}
+                  style={({ pressed }) => [
+                    styles.createPostButton,
+                    {
+                      backgroundColor: theme.backgroundElement,
+                      borderColor: theme.backgroundSelected,
+                    },
+                    pressed ? styles.pressed : null,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create post">
+                  <FontAwesome name="plus" size={12} color={theme.accent} />
+                  <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                    Create
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={handleProfilePress}
+                  style={({ pressed }) => [
+                    styles.profileButton,
+                    {
+                      backgroundColor: theme.backgroundElement,
+                      borderColor: theme.backgroundSelected,
+                    },
+                    pressed ? styles.pressed : null,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="View your profile">
+                  <FontAwesome name="user-circle-o" size={18} color={theme.text} />
+                </Pressable>
+              </View>
               <Button
                 title="Sign out"
                 onPress={async () => {
@@ -170,6 +197,7 @@ export default function HomeScreen() {
             <PostCard
               item={item}
               isLikeLoading={likeLoadingPostIds.includes(item.post.postId)}
+              onAuthorPress={handleAuthorPress}
               onToggleLike={handleToggleLike}
             />
           )}
@@ -201,6 +229,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: Spacing.one,
   },
+  headerButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
   createPostButton: {
     minHeight: 34,
     borderRadius: Spacing.five,
@@ -210,6 +243,14 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     paddingHorizontal: Spacing.two,
     paddingVertical: 6,
+    borderWidth: 1,
+  },
+  profileButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
   },
   pressed: {
