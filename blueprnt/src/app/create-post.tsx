@@ -23,8 +23,6 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { createPost, POST_TYPES, type CreatePostType } from '@/services/posts';
 
-const TEST_USER_ID = '906d95c7-877a-4d5d-ba52-6c6d3bd6f533';
-
 type FormInputProps = TextInputProps & {
   label: string;
   fieldStyle?: ViewStyle;
@@ -87,7 +85,6 @@ export default function CreatePostScreen() {
 
     try {
       await createPost({
-        userId: TEST_USER_ID,
         type: selectedType,
         distance: distance.trim(),
         calories: calories.trim(),

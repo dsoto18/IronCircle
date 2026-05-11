@@ -1,11 +1,10 @@
 import { FontAwesome } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Button, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { logout } from '@/auth/authService';
-import { Button } from 'react-native';
 
 import { PostCard } from '@/components/post-card';
 import { ScreenHeader } from '@/components/screen-header';
@@ -17,9 +16,6 @@ import { mockFeedPosts } from '@/mocks/feed-posts';
 import { getFeed } from '@/services/feed';
 import { likePost, unlikePost } from '@/services/likes';
 import type { FeedPost } from '@/types';
-
-const TEST_USER_ID = '906d95c7-877a-4d5d-ba52-6c6d3bd6f533'; // change with local data
-// const TEST_USER_ID = `f5f4be11-4e97-4148-95d2-703274937972` // prod example
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,7 +37,6 @@ export default function HomeScreen() {
 
     try {
       const payload = {
-        userId: TEST_USER_ID,
         author: post.userId,
         createdAt: post.createdAt,
       };
@@ -85,7 +80,7 @@ export default function HomeScreen() {
           setIsLoading(true);
           setErrorMessage(null);
 
-          const data = await getFeed(TEST_USER_ID);
+          const data = await getFeed();
 
           if (!isMounted) {
             return;

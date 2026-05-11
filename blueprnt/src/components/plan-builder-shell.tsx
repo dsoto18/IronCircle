@@ -49,7 +49,6 @@ type CreateDayDraft = {
 };
 
 type PlanBuilderShellProps = {
-  userId: string;
   onPlanCreated?: (plan: Plan) => void;
   onPlanPublished?: () => Promise<void> | void;
   initialDraft?: HydratedPlanDraft | null;
@@ -103,7 +102,6 @@ const INITIAL_CREATE_DAY_DRAFT: CreateDayDraft = {
 };
 
 export function PlanBuilderShell({
-  userId,
   onPlanCreated,
   onPlanPublished,
   initialDraft,
@@ -209,7 +207,6 @@ export function PlanBuilderShell({
 
     try {
       const nextPlan = await createPlan({
-        userId,
         title,
         summary,
         description: createPlanDraft.description.trim() || undefined,
@@ -267,7 +264,6 @@ export function PlanBuilderShell({
     try {
       const nextWeek = await createWeek({
         planId: createdPlan.planId,
-        userId,
         title,
         summary,
         notes: createWeekDraft.notes.trim() || undefined,
@@ -303,7 +299,6 @@ export function PlanBuilderShell({
       await publishPlan({
         createdAt: createdPlan.createdAt,
         planId: createdPlan.planId,
-        userId,
       });
 
       await onPlanPublished?.();
@@ -346,7 +341,6 @@ export function PlanBuilderShell({
     try {
       const nextDay = await createDay({
         planId: createdPlan.planId,
-        userId,
         weekNumber: week.weekNumber,
         title,
         summary: draft.summary.trim() || undefined,

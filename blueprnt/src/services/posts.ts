@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '@/services/authSession';
 import { client } from '@/services/client';
 import type { Post } from '@/types';
 
@@ -6,7 +7,6 @@ export const POST_TYPES = ['Run', 'Lift', 'Yoga', 'Swim', 'Cycling', 'HIIT'] as 
 export type CreatePostType = (typeof POST_TYPES)[number];
 
 export type CreatePostInput = {
-  userId: string;
   type: CreatePostType;
   distance: string;
   calories: string;
@@ -34,7 +34,6 @@ function normalizeOptionalMetric(value: string) {
 }
 
 export async function createPost({
-  userId,
   type,
   distance,
   calories,
@@ -60,7 +59,9 @@ export async function createPost({
     body.calories = normalizedCalories;
   }
 
-  const response = await client.post<CreatePostResponse>(`/${userId}/posts`, body);
+  const response = await client.post<CreatePostResponse>('/posts', body, {
+    headers: await getAuthHeaders('accessToken'),
+  });
 
   return response && typeof response === 'object' && 'post' in response ? response.post : response;
 }

@@ -9,22 +9,29 @@ import {
   Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { confirmRegistration } from '@/auth/authService';
-import { getMe } from '@/auth/userService';
-import { resendSignUpCode } from 'aws-amplify/auth';
+import { confirmRegistration, resendRegistrationCode } from '@/auth/authService';
+import { getMe } from '@/services/user';
 
 export default function Confirm() {
-//   const { email } = useLocalSearchParams<{ email: string }>();
-const params = useLocalSearchParams<{ email?: string }>();
-const [emailInput, setEmailInput] = useState(params.email ?? '');
+  //   const { email } = useLocalSearchParams<{ email: string }>();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const [emailInput, setEmailInput] = useState(params.email ?? '');
 
-const email = emailInput.trim();
+  const email = emailInput.trim();
 
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+
+  const isBusy = isConfirming || isResending;
 
   async function handleConfirm() {
+    if (isBusy) {
+      return;
+    }
+
     setError('');
     setMessage('');
 
@@ -39,6 +46,7 @@ const email = emailInput.trim();
     }
 
     try {
+      setIsConfirming(true);
       const result = await confirmRegistration(email, code.trim());
 
       if(result?.isSignedIn){
@@ -59,10 +67,16 @@ const email = emailInput.trim();
 
     } catch (err: any) {
       setError(err?.message || 'Unable to confirm account');
+    } finally {
+      setIsConfirming(false);
     }
   }
 
   async function handleResendCode() {
+    if (isBusy) {
+      return;
+    }
+
     setError('');
     setMessage('');
 
@@ -72,10 +86,13 @@ const email = emailInput.trim();
     }
 
     try {
-      await resendSignUpCode({ username: email });
+      setIsResending(true);
+      await resendRegistrationCode(email);
       setMessage('Confirmation code resent. Check your email. If you have an account, the code will arrive shortly.');
     } catch (err: any) {
       setError(err?.message || 'Unable to resend confirmation code');
+    } finally {
+      setIsResending(false);
     }
   }
 
@@ -107,8 +124,16 @@ const email = emailInput.trim();
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {message ? <Text style={styles.success}>{message}</Text> : null}
 
-        <Button title="Confirm" onPress={handleConfirm} />
-        <Button title="Resend Code" onPress={handleResendCode} />
+        <Button
+          title={isConfirming ? 'Confirming...' : 'Confirm'}
+          onPress={handleConfirm}
+          disabled={isBusy}
+        />
+        <Button
+          title={isResending ? 'Resending...' : 'Resend Code'}
+          onPress={handleResendCode}
+          disabled={isBusy}
+        />
       </View>
     </KeyboardAvoidingView>
   );

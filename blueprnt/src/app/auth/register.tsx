@@ -18,8 +18,13 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleRegister() {
+    if (isSubmitting) {
+      return;
+    }
+
     setError('');
     setSuccess('');
 
@@ -39,6 +44,7 @@ export default function Register() {
     }
 
     try {
+      setIsSubmitting(true);
       await register(email.trim(), password);
 
       setSuccess('Account created. Check your email to verify your account, then log in.');
@@ -52,6 +58,7 @@ export default function Register() {
       }, 1500);
     } catch (err: any) {
       setError(err?.message || 'Unable to create account');
+      setIsSubmitting(false);
     }
   }
 
@@ -91,9 +98,13 @@ export default function Register() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {success ? <Text style={styles.success}>{success}</Text> : null}
 
-        <Button title="Create Account" onPress={handleRegister} />
+        <Button
+          title={isSubmitting ? 'Creating account...' : 'Create Account'}
+          onPress={handleRegister}
+          disabled={isSubmitting}
+        />
 
-        <Pressable onPress={() => router.replace('/auth/login')}>
+        <Pressable disabled={isSubmitting} onPress={() => router.replace('/auth/login')}>
           <Text style={styles.link}>Already have an account? Log in</Text>
         </Pressable>
       </View>

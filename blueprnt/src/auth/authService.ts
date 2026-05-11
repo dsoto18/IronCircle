@@ -1,4 +1,12 @@
-import { signUp, signIn, getCurrentUser, signOut, confirmSignUp, autoSignIn } from 'aws-amplify/auth';
+import {
+  signUp,
+  signIn,
+  getCurrentUser,
+  signOut,
+  confirmSignUp,
+  autoSignIn,
+  resendSignUpCode,
+} from 'aws-amplify/auth';
 
 export async function register(email: string, password: string) {
   return await signUp({
@@ -36,8 +44,12 @@ export async function confirmRegistration(email: string, code: string) {
 
   try {
     return await autoSignIn();
-  } catch (err) {
+  } catch {
     // Auto sign-in unavailable after confirmation
     return null;
   }
+}
+
+export async function resendRegistrationCode(email: string) {
+  return await resendSignUpCode({ username: email });
 }

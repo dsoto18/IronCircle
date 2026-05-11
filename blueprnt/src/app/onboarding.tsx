@@ -9,17 +9,20 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { fetchAuthSession } from 'aws-amplify/auth';
-
-const API_BASE_URL = 'http://localhost:3000';
+import { createCurrentUser } from '@/services/user';
 
 export default function Onboarding() {
   const [username, setUsername] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit() {
+    if (isSubmitting) {
+      return;
+    }
+
     setError('');
 
     if (!username.trim()) {
@@ -36,33 +39,18 @@ export default function Onboarding() {
     }
 
     try {
-      const session = await fetchAuthSession();
-    //   const token = session.tokens?.accessToken?.toString();
-      const token = session.tokens?.idToken?.toString();
-    //   const email = session.tokens?.idToken?.payload?.email as string | undefined;
-
-      const res = await fetch(`${API_BASE_URL}/users`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-        //   email, old approach, backend extracts it from token now
-        }),
+      setIsSubmitting(true);
+      await createCurrentUser({
+        username,
+        firstName,
+        lastName,
       });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.message || 'Unable to complete onboarding');
-      }
 
       router.replace('/(tabs)');
     } catch (err: any) {
       setError(err?.message || 'Unable to complete onboarding');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -99,7 +87,11 @@ export default function Onboarding() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Button title="Continue" onPress={handleSubmit} />
+        <Button
+          title={isSubmitting ? 'Continuing...' : 'Continue'}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        />
       </View>
     </KeyboardAvoidingView>
   );

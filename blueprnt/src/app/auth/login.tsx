@@ -11,15 +11,21 @@ import {
 } from 'react-native';
 import { login } from '@/auth/authService';
 import { router } from 'expo-router';
-import { getMe } from '@/auth/userService';
+import { getMe } from '@/services/user';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleLogin() {
+    if (isSubmitting) {
+      return;
+    }
+
     setError('');
+    setIsSubmitting(true);
 
     try {
       const result = await login(email.trim(), password);
@@ -60,6 +66,8 @@ export default function Login() {
       }
       
       setError(err?.message || 'Unable to log in');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -90,12 +98,17 @@ export default function Login() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Button title="Login" onPress={handleLogin} />
+        <Button
+          title={isSubmitting ? 'Logging in...' : 'Login'}
+          onPress={handleLogin}
+          disabled={isSubmitting}
+        />
 
-        <Pressable onPress={() => router.push('/auth/register')}>
+        <Pressable disabled={isSubmitting} onPress={() => router.push('/auth/register')}>
           <Text style={styles.link}>Need an account? Register</Text>
         </Pressable>
         <Pressable
+          disabled={isSubmitting}
           onPress={() =>
             router.push({
               pathname: '/auth/confirm',
