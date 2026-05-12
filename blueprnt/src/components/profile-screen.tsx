@@ -18,6 +18,7 @@ type ProfileScreenProps = {
   followingCount?: number;
   statusMessage?: string | null;
   onBackPress?: () => void;
+  onEditPress?: () => void;
   onFollowPress?: () => void;
 };
 
@@ -36,7 +37,13 @@ function getInitials(user: User) {
   return initials ? initials.toUpperCase() : user.username.charAt(0).toUpperCase();
 }
 
-function ProfileTopBar({ onBackPress }: { onBackPress?: () => void }) {
+function ProfileTopBar({
+  onBackPress,
+  onEditPress,
+}: {
+  onBackPress?: () => void;
+  onEditPress?: () => void;
+}) {
   const theme = useTheme();
 
   return (
@@ -64,7 +71,27 @@ function ProfileTopBar({ onBackPress }: { onBackPress?: () => void }) {
         Profile
       </ThemedText>
 
-      <View style={styles.iconButtonPlaceholder} />
+      {onEditPress ? (
+        <Pressable
+          onPress={onEditPress}
+          style={({ pressed }) => [
+            styles.editButton,
+            {
+              backgroundColor: theme.backgroundElement,
+              borderColor: theme.backgroundSelected,
+            },
+            pressed ? styles.pressed : null,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile">
+          <FontAwesome name="pencil" size={14} color={theme.accent} />
+          <ThemedText type="smallBold" style={{ color: theme.accent }}>
+            Edit
+          </ThemedText>
+        </Pressable>
+      ) : (
+        <View style={styles.iconButtonPlaceholder} />
+      )}
     </View>
   );
 }
@@ -107,6 +134,7 @@ export function ProfileScreen({
   followingCount,
   statusMessage,
   onBackPress,
+  onEditPress,
   onFollowPress,
 }: ProfileScreenProps) {
   const theme = useTheme();
@@ -121,7 +149,7 @@ export function ProfileScreen({
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <ProfileTopBar onBackPress={onBackPress} />
+          <ProfileTopBar onBackPress={onBackPress} onEditPress={onEditPress} />
 
           <ThemedView type="backgroundElement" style={styles.profileCard}>
             <View style={styles.heroRow}>
@@ -288,6 +316,16 @@ const styles = StyleSheet.create({
   iconButtonPlaceholder: {
     width: 40,
     height: 40,
+  },
+  editButton: {
+    minHeight: 36,
+    borderRadius: Spacing.five,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.two,
   },
   profileCard: {
     borderRadius: Spacing.four,

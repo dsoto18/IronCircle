@@ -127,9 +127,33 @@ export default function HomeScreen() {
         <ScreenHeader
           eyebrow="Blueprnt"
           title="Checkout Your Circle&apos;s Activity"
+          alignTrailingToTop
           trailingContent={
             <View style={styles.headerActions}>
-              <View style={styles.headerButtonRow}>
+              <View style={styles.headerTopRow}>
+                <Button
+                  title="Sign out"
+                  onPress={async () => {
+                    await logout();
+                    router.replace('/auth/login');
+                  }}
+                />
+                <Pressable
+                  onPress={handleProfilePress}
+                  style={({ pressed }) => [
+                    styles.profileButton,
+                    {
+                      backgroundColor: theme.backgroundElement,
+                      borderColor: theme.backgroundSelected,
+                    },
+                    pressed ? styles.pressed : null,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="View your profile">
+                  <FontAwesome name="user-circle-o" size={18} color={theme.text} />
+                </Pressable>
+              </View>
+              <View style={styles.headerLowerActions}>
                 <Pressable
                   onPress={handleCreatePostPress}
                   style={({ pressed }) => [
@@ -147,31 +171,10 @@ export default function HomeScreen() {
                     Create
                   </ThemedText>
                 </Pressable>
-                <Pressable
-                  onPress={handleProfilePress}
-                  style={({ pressed }) => [
-                    styles.profileButton,
-                    {
-                      backgroundColor: theme.backgroundElement,
-                      borderColor: theme.backgroundSelected,
-                    },
-                    pressed ? styles.pressed : null,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="View your profile">
-                  <FontAwesome name="user-circle-o" size={18} color={theme.text} />
-                </Pressable>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {feedPosts.length} posts
+                </ThemedText>
               </View>
-              <Button
-                title="Sign out"
-                onPress={async () => {
-                  await logout();
-                  router.replace('/auth/login');
-                }}
-              />
-              <ThemedText type="small" themeColor="textSecondary">
-                {feedPosts.length} posts
-              </ThemedText>
             </View>
           }
         />
@@ -229,10 +232,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: Spacing.one,
   },
-  headerButtonRow: {
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+    marginTop: -Spacing.two,
+  },
+  headerLowerActions: {
+    alignItems: 'flex-end',
+    gap: Spacing.one,
+    marginTop: Spacing.five + Spacing.two,
   },
   createPostButton: {
     minHeight: 34,

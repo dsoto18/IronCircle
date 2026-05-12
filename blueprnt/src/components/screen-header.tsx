@@ -9,6 +9,7 @@ type ScreenHeaderProps = {
   subtitle?: string;
   eyebrowColor?: ThemeColor;
   trailingContent?: React.ReactNode;
+  alignTrailingToTop?: boolean;
 };
 
 export function ScreenHeader({
@@ -17,9 +18,10 @@ export function ScreenHeader({
   subtitle,
   eyebrowColor = 'accent',
   trailingContent,
+  alignTrailingToTop = false,
 }: ScreenHeaderProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, alignTrailingToTop ? styles.containerTopAligned : null]}>
       <View style={styles.copy}>
         {eyebrow ? (
           <ThemedText type="small" themeColor={eyebrowColor}>
@@ -34,7 +36,11 @@ export function ScreenHeader({
         ) : null}
       </View>
 
-      {trailingContent ? <View style={styles.trailing}>{trailingContent}</View> : null}
+      {trailingContent ? (
+        <View style={[styles.trailing, alignTrailingToTop ? styles.trailingTopAligned : null]}>
+          {trailingContent}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -46,6 +52,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.three,
   },
+  containerTopAligned: {
+    alignItems: 'flex-start',
+  },
   copy: {
     flex: 1,
     gap: Spacing.half,
@@ -56,5 +65,8 @@ const styles = StyleSheet.create({
   trailing: {
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
+  },
+  trailingTopAligned: {
+    justifyContent: 'flex-start',
   },
 });

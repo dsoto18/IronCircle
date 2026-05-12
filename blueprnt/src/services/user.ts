@@ -13,6 +13,12 @@ export type CreateCurrentUserInput = {
   lastName: string;
 };
 
+export type UpdateUserProfileInput = {
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+};
+
 type GetMeResponse = {
   needsOnboarding?: boolean;
   user?: User | null;
@@ -94,6 +100,20 @@ export async function getUserProfile(user: string) {
   } catch (error) {
     if (error instanceof ApiError) {
       throw new Error(getApiErrorMessage(error) ?? 'Unable to load user profile');
+    }
+
+    throw error;
+  }
+}
+
+export async function updateUserProfile(username: string, input: UpdateUserProfileInput) {
+  try {
+    return client.patch<any>(`/users/${encodePathSegment(username)}`, input, {
+      headers: await getAuthHeaders('accessToken'),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new Error(getApiErrorMessage(error) ?? 'Unable to update profile');
     }
 
     throw error;

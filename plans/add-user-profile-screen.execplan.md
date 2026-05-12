@@ -17,6 +17,9 @@ Add a simple, reusable profile experience for the Blueprnt Expo app. The same pr
 - [x] (2026-05-11 17:24Z) Updated the dynamic profile route to treat follower/following reads as follow relationship records, not full `User` objects.
 - [x] (2026-05-11 17:24Z) Re-ran `npx tsc --noEmit`; TypeScript validation passed.
 - [x] (2026-05-11 17:24Z) Re-ran `npm run lint`; Expo lint still reports only the existing warning in untouched `blueprnt/src/services/plans.ts`.
+- [x] (2026-05-12 00:50Z) Added a current-user profile edit flow for `firstName`, `lastName`, and `bio`.
+- [x] (2026-05-12 00:50Z) Re-ran `npx tsc --noEmit`; TypeScript validation passed.
+- [x] (2026-05-12 00:50Z) Re-ran `npm run lint`; Expo lint still reports only the existing warning in untouched `blueprnt/src/services/plans.ts`.
 
 ## Surprises & Discoveries
 
@@ -24,6 +27,7 @@ Add a simple, reusable profile experience for the Blueprnt Expo app. The same pr
 - The feed author type already includes `userId`, `username`, `profilePictureUrl`, and `isVerified`, which is enough to link post authors to a profile route.
 - Follow creation exists as `POST /:userId/followers/:followerId`. Unfollow does not exist yet, so the frontend will target the natural matching `DELETE /:userId/followers/:followerId` contract and surface errors if the backend has not implemented it yet.
 - Follower/following reads currently return relationship query results with `Items` and `Count`, not full profile objects. A follower relationship uses `sourceUserId`; a following relationship uses `targetUserId`.
+- Current-user profile updates should call `PATCH /users/:username` with only non-empty `firstName`, `lastName`, and `bio` fields. `bio` must be limited to 30 characters.
 
 ## Decision Log
 
@@ -43,9 +47,15 @@ Add a simple, reusable profile experience for the Blueprnt Expo app. The same pr
   Rationale: The backend follow routes currently return DynamoDB relationship records rather than user profiles, and the user asked to preserve the looser service shape until the API response is tightened later.
   Date/Author: 2026-05-11 / Codex
 
+- Decision: Keep the edit form route-local in `blueprnt/src/app/profile/index.tsx` and add only a small optional edit affordance to `ProfileScreen`.
+  Rationale: Editing is currently only needed for the signed-in user's profile, while the reusable profile layout should stay mostly presentational.
+  Date/Author: 2026-05-12 / Codex
+
 ## Outcomes & Retrospective
 
 The app now has a reusable profile layout, a current-user profile route at `/profile`, and a dynamic other-user route at `/profile/[userId]`. Home exposes a profile button for the signed-in user, and post author/avatar taps navigate to the dynamic profile route. The dynamic route now uses relationship records only for counts and follow state, avoiding assumptions that follower/following routes return full users.
+
+The current-user profile now has an edit modal for `firstName`, `lastName`, and `bio`. Empty fields are omitted from the PATCH body, submitting with all fields empty is blocked client-side, and bio entry is capped at 30 characters with a character counter.
 
 TypeScript validation passes. Expo lint completed successfully but reported one warning in untouched `blueprnt/src/services/plans.ts` for an unused `userId` variable.
 
@@ -64,6 +74,8 @@ The current tabs are defined by `blueprnt/src/app/(tabs)/_layout.tsx` and `bluep
 5. Add `blueprnt/src/app/profile/[userId].tsx` for other profiles using route params, `getUserProfile`, `getUserFollowers`, `followUser`, and `unfollowUser`.
 6. Update `PostCard` to accept an optional `onAuthorPress` callback and update the Home screen to navigate to `/profile/[userId]`.
 7. Run `npx tsc --noEmit` from `blueprnt/` and record results.
+8. Add `updateUserProfile` to `blueprnt/src/services/user.ts` for `PATCH /users/:username`.
+9. Add a current-user edit modal/form in `blueprnt/src/app/profile/index.tsx`, with empty-field omission, no-op submit prevention, and a 30-character bio limit.
 
 ## Concrete Steps
 
@@ -77,6 +89,7 @@ From the repository root, edit these files:
 - `blueprnt/src/components/post-card.tsx`
 - `blueprnt/src/app/(tabs)/index.tsx`
 - `blueprnt/src/app/_layout.tsx` if explicit stack registration is needed
+- `blueprnt/src/app/profile/index.tsx` for the current-user edit form
 
 Then validate from `blueprnt/`:
 
@@ -95,6 +108,7 @@ npm run lint
 The change is accepted when TypeScript passes and the following app behavior is available:
 
 - Opening `/profile` shows the signed-in user's profile fields and no follow button.
+- Opening `/profile` shows an edit button. Submitting an edit with no fields entered does not send a request. Submitting non-empty `firstName`, `lastName`, or `bio` sends only those fields to `PATCH /users/:username`.
 - Opening `/profile/:userId` shows another user's profile fields and a follow/unfollow button when the viewed user is not the signed-in user.
 - Tapping a post author's avatar/name from Home navigates to that author's profile route.
 - Loading and error states render without crashing.
@@ -116,4 +130,5 @@ No generated assets are expected. The profile image uses `profilePictureUrl` thr
 - `GET /users/:userId/following` returns user profiles or `{ following: User[] }`.
 - `POST /:userId/followers/:followerId` adds `followerId` as a follower of `userId`.
 - Expected future route: `DELETE /:userId/followers/:followerId` removes `followerId` from `userId` followers.
+- `PATCH /users/:username` updates the signed-in user's mutable profile fields and accepts any subset of `firstName`, `lastName`, and `bio`.
 - Existing `EXPO_PUBLIC_API_BASE_URL` behavior in `blueprnt/src/services/client.ts` is unchanged.
