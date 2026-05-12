@@ -18,6 +18,7 @@ Success can be observed in the Expo app by opening the Explore tab, switching be
 - [x] (2026-05-12 02:44Z) Ran `npx tsc --noEmit` from `blueprnt/`; it passed.
 - [x] (2026-05-12 02:45Z) Ran `npm run lint` from `blueprnt/`; it exited successfully with one warning in unrelated `blueprnt/src/services/plans.ts`.
 - [x] (2026-05-12 02:45Z) Ran `git diff --check` from the repository root; it passed.
+- [x] (2026-05-12 02:46Z) Attempted to start Expo on port `8082`; Expo opened an unresponsive listener without a reachable local response, so the process was stopped.
 
 ## Surprises & Discoveries
 
@@ -44,7 +45,7 @@ Success can be observed in the Expo app by opening the Explore tab, switching be
 
 Implemented the first version of People mode on the Explore tab. Featured mode keeps the existing mock explore-card filtering and source filters. People mode has its own search text, waits for a three-character query, debounces calls to `searchUsers`, renders loading/error/helper/empty states, and navigates results to the existing profile route by `userId`.
 
-Validation completed with TypeScript and lint. Manual Expo/backend validation remains recommended to confirm the live `GET /users?text=<query>` response and profile navigation in the running app.
+Validation completed with TypeScript, lint, and whitespace checks. An Expo dev server attempt did not produce a reachable local response in this environment, so manual Expo/backend validation remains recommended to confirm the live `GET /users?text=<query>` response and profile navigation in the running app.
 
 ## Context and Orientation
 

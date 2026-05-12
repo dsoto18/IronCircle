@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
 import { ExploreCard } from '@/components/explore-card';
 import { FilterChip } from '@/components/filter-chip';
@@ -11,8 +12,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { UserSearchCard } from '@/components/user-search-card';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { mockExploreItems } from '@/mocks/explore-items';
-import { searchUsers, type UserSearchResult } from '@/services/user';
+import { useTheme } from '@/hooks/use-theme';
+import { getFeaturedPosts } from '@/services/featured';
+import { getMe, searchUsers, type UserSearchResult } from '@/services/user';
 import type { ExploreItem, ExploreSourceType } from '@/types';
 
 const EXPLORE_MODES = [
@@ -37,7 +39,12 @@ const FILTER_TO_SOURCE_TYPE: Partial<Record<ExploreFilter, ExploreSourceType>> =
 
 export default function ExploreScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [selectedMode, setSelectedMode] = useState<ExploreMode>('featured');
+  const [featuredItems, setFeaturedItems] = useState<ExploreItem[]>([]);
+  const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
+  const [featuredErrorMessage, setFeaturedErrorMessage] = useState<string | null>(null);
+  const [canCreateFeaturedPost, setCanCreateFeaturedPost] = useState(false);
   const [featuredSearchQuery, setFeaturedSearchQuery] = useState('');
   const [peopleSearchQuery, setPeopleSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
@@ -47,6 +54,56 @@ export default function ExploreScreen() {
 
   const normalizedQuery = featuredSearchQuery.trim().toLowerCase();
   const trimmedPeopleQuery = peopleSearchQuery.trim();
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadFeaturedPosts() {
+        try {
+          setIsFeaturedLoading(true);
+          setFeaturedErrorMessage(null);
+
+          const posts = await getFeaturedPosts();
+
+          if (isActive) {
+            setFeaturedItems(posts);
+          }
+        } catch (error) {
+          if (isActive) {
+            console.error('Failed to load featured posts', error);
+            setFeaturedErrorMessage('Could not load featured posts right now.');
+          }
+        } finally {
+          if (isActive) {
+            setIsFeaturedLoading(false);
+          }
+        }
+      }
+
+      async function loadCurrentUser() {
+        try {
+          const result = await getMe();
+
+          if (isActive) {
+            setCanCreateFeaturedPost(result.user?.isVerified === true);
+          }
+        } catch (error) {
+          if (isActive) {
+            console.error('Failed to load current user for featured permissions', error);
+            setCanCreateFeaturedPost(false);
+          }
+        }
+      }
+
+      loadFeaturedPosts();
+      loadCurrentUser();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   useEffect(() => {
     if (selectedMode !== 'people') {
@@ -92,7 +149,7 @@ export default function ExploreScreen() {
     };
   }, [selectedMode, trimmedPeopleQuery]);
 
-  const filteredItems = mockExploreItems.filter((item) => {
+  const filteredItems = featuredItems.filter((item) => {
     const selectedSourceType = FILTER_TO_SOURCE_TYPE[selectedFilter];
     const matchesFilter = !selectedSourceType || item.sourceType === selectedSourceType;
 
@@ -119,7 +176,7 @@ export default function ExploreScreen() {
   const activeSearchQuery = selectedMode === 'people' ? peopleSearchQuery : featuredSearchQuery;
   const searchPlaceholder =
     selectedMode === 'people'
-      ? 'Search users by name or username'
+      ? 'Search users by username'
       : 'Search creators, clubs, or topics';
   const listItems: ExploreListItem[] =
     selectedMode === 'people'
@@ -134,15 +191,21 @@ export default function ExploreScreen() {
       ? trimmedPeopleQuery.length >= 3
         ? `${peopleResults.length} people`
         : 'People'
+      : isFeaturedLoading
+        ? 'Loading'
       : `${filteredItems.length} items`;
   const sectionTitle =
-    selectedMode === 'people' ? 'People on Blueprnt' : 'Featured from verified sources';
+    selectedMode === 'people' ? 'People on Blueprnt' : 'Featured:'; // left out 'from verified sources'
   const sectionDetail =
     selectedMode === 'people'
       ? isPeopleLoading
         ? 'Searching Blueprnt'
-        : 'Name or username'
+        : 'Name and username'
+      : isFeaturedLoading
+        ? 'Loading from Blueprnt'
       : 'Posts, challenges, and announcements';
+  const showCreateFeaturedButton = selectedMode === 'featured' && canCreateFeaturedPost;
+  const showEyebrowTrailingContent = showCreateFeaturedButton || selectedMode === 'people';
 
   function handleSearchChange(value: string) {
     if (selectedMode === 'people') {
@@ -155,6 +218,10 @@ export default function ExploreScreen() {
 
   function handleUserPress(user: UserSearchResult) {
     router.push(`/profile/${encodeURIComponent(user.userId)}`);
+  }
+
+  function handleCreateFeaturedPostPress() {
+    router.push('/create-featured-post');
   }
 
   function renderEmptyState() {
@@ -215,12 +282,47 @@ export default function ExploreScreen() {
     );
   }
 
+  function renderFeaturedStatus() {
+    if (selectedMode !== 'featured' || listItems.length > 0) {
+      return null;
+    }
+
+    if (isFeaturedLoading) {
+      return (
+        <ThemedView type="backgroundElement" style={styles.statusCard}>
+          <ActivityIndicator />
+          <View style={styles.statusCopy}>
+            <ThemedText type="smallBold">Loading featured posts...</ThemedText>
+            <ThemedText themeColor="textSecondary">
+              Pulling the latest posts from verified sources.
+            </ThemedText>
+          </View>
+        </ThemedView>
+      );
+    }
+
+    if (featuredErrorMessage) {
+      return (
+        <ThemedView type="backgroundElement" style={styles.emptyState}>
+          <ThemedText type="smallBold">Could not load featured posts</ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.emptyCopy}>
+            {featuredErrorMessage}
+          </ThemedText>
+        </ThemedView>
+      );
+    }
+
+    return null;
+  }
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <FlatList
           data={listItems}
-          keyExtractor={(item) => (item.type === 'featured' ? item.item.PK : item.user.userId)}
+          keyExtractor={(item) =>
+            item.type === 'featured' ? `${item.item.PK}-${item.item.SK}` : item.user.userId
+          }
           renderItem={({ item }) =>
             item.type === 'featured' ? (
               <ExploreCard item={item.item} />
@@ -236,10 +338,34 @@ export default function ExploreScreen() {
                 eyebrow="Blueprnt"
                 title="Explore"
                 subtitle={headerSubtitle}
+                alignTrailingToTop={showEyebrowTrailingContent}
+                overlayTrailingContent={showEyebrowTrailingContent}
+                fullWidthSubtitle={showEyebrowTrailingContent}
                 trailingContent={
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {headerCountLabel}
-                  </ThemedText>
+                  <View style={styles.headerActions}>
+                    {showCreateFeaturedButton ? (
+                      <Pressable
+                        onPress={handleCreateFeaturedPostPress}
+                        style={({ pressed }) => [
+                          styles.createFeaturedButton,
+                          {
+                            backgroundColor: theme.backgroundElement,
+                            borderColor: theme.backgroundSelected,
+                          },
+                          pressed ? styles.pressed : null,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Create featured post">
+                        <FontAwesome name="plus" size={12} color={theme.accent} />
+                        <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                          Create
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {headerCountLabel}
+                    </ThemedText>
+                  </View>
                 }
               />
 
@@ -287,9 +413,15 @@ export default function ExploreScreen() {
                   {sectionDetail}
                 </ThemedText>
               </View>
+
+              {renderFeaturedStatus()}
             </View>
           }
-          ListEmptyComponent={renderEmptyState}
+          ListEmptyComponent={
+            selectedMode === 'featured' && (isFeaturedLoading || featuredErrorMessage)
+              ? null
+              : renderEmptyState
+          }
         />
       </SafeAreaView>
     </ThemedView>
@@ -315,6 +447,24 @@ const styles = StyleSheet.create({
   headerBlock: {
     gap: Spacing.three,
     paddingBottom: Spacing.one,
+  },
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: Spacing.one,
+  },
+  createFeaturedButton: {
+    minHeight: 34,
+    borderRadius: Spacing.five,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  pressed: {
+    opacity: 0.8,
   },
   chipsRow: {
     flexGrow: 0,

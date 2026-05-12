@@ -10,6 +10,8 @@ type ScreenHeaderProps = {
   eyebrowColor?: ThemeColor;
   trailingContent?: React.ReactNode;
   alignTrailingToTop?: boolean;
+  overlayTrailingContent?: boolean;
+  fullWidthSubtitle?: boolean;
 };
 
 export function ScreenHeader({
@@ -19,9 +21,16 @@ export function ScreenHeader({
   eyebrowColor = 'accent',
   trailingContent,
   alignTrailingToTop = false,
+  overlayTrailingContent = false,
+  fullWidthSubtitle = false,
 }: ScreenHeaderProps) {
   return (
-    <View style={[styles.container, alignTrailingToTop ? styles.containerTopAligned : null]}>
+    <View
+      style={[
+        styles.container,
+        alignTrailingToTop ? styles.containerTopAligned : null,
+        overlayTrailingContent ? styles.containerWithOverlay : null,
+      ]}>
       <View style={styles.copy}>
         {eyebrow ? (
           <ThemedText type="small" themeColor={eyebrowColor}>
@@ -30,14 +39,21 @@ export function ScreenHeader({
         ) : null}
         <ThemedText type="subtitle">{title}</ThemedText>
         {subtitle ? (
-          <ThemedText style={styles.subtitle} themeColor="textSecondary">
+          <ThemedText
+            style={fullWidthSubtitle ? null : styles.subtitle}
+            themeColor="textSecondary">
             {subtitle}
           </ThemedText>
         ) : null}
       </View>
 
       {trailingContent ? (
-        <View style={[styles.trailing, alignTrailingToTop ? styles.trailingTopAligned : null]}>
+        <View
+          style={[
+            styles.trailing,
+            alignTrailingToTop ? styles.trailingTopAligned : null,
+            overlayTrailingContent ? styles.trailingOverlay : null,
+          ]}>
           {trailingContent}
         </View>
       ) : null}
@@ -55,6 +71,9 @@ const styles = StyleSheet.create({
   containerTopAligned: {
     alignItems: 'flex-start',
   },
+  containerWithOverlay: {
+    position: 'relative',
+  },
   copy: {
     flex: 1,
     gap: Spacing.half,
@@ -68,5 +87,10 @@ const styles = StyleSheet.create({
   },
   trailingTopAligned: {
     justifyContent: 'flex-start',
+  },
+  trailingOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
   },
 });

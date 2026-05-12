@@ -25,6 +25,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="profile" />
           <Stack.Screen name="create-post" />
+          <Stack.Screen name="create-featured-post" />
           <Stack.Screen name="plan-builder" />
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="auth/confirm" />
