@@ -4,7 +4,7 @@ export const mockExploreItems: ExploreItem[] = [
   {
     PK: 'EXPLORE#forge-performance-summer-hybrid',
     SK: 'ITEM#2026-04-01T12:00:00.000Z',
-    entity: 'EXPLORE_ITEM',
+    entity: 'ExplorePost',
     sourceId: 'source-forge-performance',
     sourceName: 'Forge Performance',
     sourceType: 'influencer',
@@ -22,7 +22,7 @@ export const mockExploreItems: ExploreItem[] = [
   {
     PK: 'EXPLORE#harbor-run-club-thursday-miles',
     SK: 'ITEM#2026-04-02T10:30:00.000Z',
-    entity: 'EXPLORE_ITEM',
+    entity: 'ExplorePost',
     sourceId: 'source-harbor-run-club',
     sourceName: 'Harbor Run Club',
     sourceType: 'club',
@@ -40,7 +40,7 @@ export const mockExploreItems: ExploreItem[] = [
   {
     PK: 'EXPLORE#blueprnt-consistency-challenge',
     SK: 'ITEM#2026-03-31T14:15:00.000Z',
-    entity: 'EXPLORE_ITEM',
+    entity: 'ExplorePost',
     sourceId: 'source-blueprnt',
     sourceName: 'Blueprnt',
     sourceType: 'brand',
@@ -58,7 +58,7 @@ export const mockExploreItems: ExploreItem[] = [
   {
     PK: 'EXPLORE#stride-lab-carbon-launch',
     SK: 'ITEM#2026-03-30T09:00:00.000Z',
-    entity: 'EXPLORE_ITEM',
+    entity: 'ExplorePost',
     sourceId: 'source-stride-lab',
     sourceName: 'Stride Lab',
     sourceType: 'brand',
