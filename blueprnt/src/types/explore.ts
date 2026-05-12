@@ -5,7 +5,7 @@ export type ExploreContentType = 'post' | 'announcement' | 'challenge' | 'ad';
 export type ExploreItem = {
   PK: string;
   SK: string;
-  entity: 'EXPLORE_ITEM';
+  entity: 'ExplorePost';
   sourceId: string;
   sourceName: string;
   sourceType: ExploreSourceType;

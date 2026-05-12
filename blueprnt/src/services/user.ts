@@ -19,12 +19,25 @@ export type UpdateUserProfileInput = {
   bio?: string;
 };
 
+export type UserSearchResult = {
+  profilePictureUrl?: string;
+  firstName: string;
+  lastName: string;
+  userId: string;
+  username: string;
+};
+
 type GetMeResponse = {
   needsOnboarding?: boolean;
   user?: User | null;
 };
 
 type CreateCurrentUserResponse = User | { user: User };
+
+type SearchUsersResponse = {
+  Items?: UserSearchResult[];
+  Count?: number;
+};
 
 function encodePathSegment(value: string) {
   return encodeURIComponent(value);
@@ -87,6 +100,27 @@ export async function createCurrentUser(input: CreateCurrentUserInput) {
   } catch (error) {
     if (error instanceof ApiError) {
       throw new Error(getApiErrorMessage(error) ?? 'Unable to complete onboarding');
+    }
+
+    throw error;
+  }
+}
+
+export async function searchUsers(text: string) {
+  const trimmedText = text.trim();
+
+  if (trimmedText.length < 3) {
+    return [];
+  }
+
+  try {
+    const params = new URLSearchParams({ text: trimmedText });
+    const response = await client.get<SearchUsersResponse>(`/users?${params.toString()}`);
+
+    return response.Items ?? [];
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new Error(getApiErrorMessage(error) ?? 'Unable to search users');
     }
 
     throw error;
