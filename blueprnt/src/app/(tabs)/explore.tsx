@@ -390,7 +390,7 @@ export default function ExploreScreen() {
                 placeholder={searchPlaceholder}
               />
 
-              {selectedMode === 'featured' ? (
+              {/* {selectedMode === 'featured' ? (  // Disabling for now before Clubs, Brands added into project
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -405,7 +405,7 @@ export default function ExploreScreen() {
                     />
                   ))}
                 </ScrollView>
-              ) : null}
+              ) : null} */}
 
               <View style={styles.sectionHeader}>
                 <ThemedText type="smallBold">{sectionTitle}</ThemedText>
