@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +28,7 @@ function getPlanListKey(plan: Plan, index: number) {
 }
 
 export default function PlansScreen() {
+  const router = useRouter();
   const theme = useTheme();
   const [plans, setPlans] = useState<Awaited<ReturnType<typeof getPlans>>>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,7 +102,17 @@ export default function PlansScreen() {
         <FlatList
           data={filteredPlans}
           keyExtractor={getPlanListKey}
-          renderItem={({ item }) => <PlanCard plan={item} />}
+          renderItem={({ item }) => (
+            <PlanCard
+              plan={item}
+              onPress={() =>
+                router.push({
+                  pathname: '/plan/[planId]',
+                  params: { planId: item.planId },
+                })
+              }
+            />
+          )}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
