@@ -36,6 +36,14 @@
           }
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Blueprnt to let you choose workout photos for posts.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       "expo-secure-store"
     ],
     "experiments": {
