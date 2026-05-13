@@ -10,6 +10,7 @@ import type { Plan, PlanDifficulty, PlanGoal, PlanType } from '@/types';
 
 type PlanCardProps = {
   plan: Plan;
+  onPress?: () => void;
 };
 
 const GOAL_LABELS: Record<PlanGoal, string> = {
@@ -47,14 +48,17 @@ function getTypeAccent(type: PlanType) {
   }
 }
 
-export function PlanCard({ plan }: PlanCardProps) {
+export function PlanCard({ plan, onPress }: PlanCardProps) {
   const theme = useTheme();
   const accent = getTypeAccent(plan.type);
   const formattedRating = typeof plan.rating === 'number' ? plan.rating.toFixed(1) : null;
   const enrollmentLabel = typeof plan.enrollmentCount === 'number' ? `${plan.enrollmentCount} joined` : 'Open';
 
   return (
-    <Pressable style={({ pressed }) => [pressed ? styles.pressed : null]}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [pressed && onPress ? styles.pressed : null]}>
       <ThemedView type="backgroundElement" style={styles.card}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>

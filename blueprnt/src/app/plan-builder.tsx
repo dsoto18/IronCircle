@@ -10,11 +10,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { buildHydratedPlanDraft } from '@/services/planHydration';
 import { getFullPlan, getUserPlans } from '@/services/plans';
-import type { FullPlanItem, HydratedPlanDraft, PlanDay, PlanWeek, UserPlan } from '@/types';
+import type { HydratedPlanDraft, UserPlan } from '@/types';
 
 type BuilderView = 'builder' | 'dashboard';
-type FullPlanMeta = Extract<FullPlanItem, { entity: 'Plan' }>;
 
 export default function PlanBuilderScreen() {
   const router = useRouter();
@@ -77,41 +77,6 @@ export default function PlanBuilderScreen() {
     };
   }, [selectedView]);
 
-  function buildHydratedDraft(items: FullPlanItem[]): HydratedPlanDraft | null {
-    const plan = items.find(
-      (item): item is FullPlanMeta =>
-        item.entity === 'Plan' &&
-        'goal' in item &&
-        'difficulty' in item &&
-        'durationWeeks' in item &&
-        'type' in item
-    );
-
-    if (!plan) {
-      return null;
-    }
-
-    const weeks = items
-      .filter((item): item is PlanWeek => item.entity === 'PlanWeek')
-      .sort((a, b) => a.weekNumber - b.weekNumber);
-
-    const days = items
-      .filter((item): item is PlanDay => item.entity === 'PlanDay')
-      .sort((a, b) => (a.weekNumber - b.weekNumber) || (a.dayNumber - b.dayNumber));
-
-    const daysByWeek = weeks.reduce<Record<string, PlanDay[]>>((acc, week) => {
-      const weekKey = `${week.planId}-${week.weekNumber}`;
-      acc[weekKey] = days.filter((day) => day.weekNumber === week.weekNumber);
-      return acc;
-    }, {});
-
-    return {
-      plan,
-      weeks,
-      daysByWeek,
-    };
-  }
-
   async function handleOpenDraft(plan: UserPlan) {
     if (plan.status !== 'draft') {
       return;
@@ -122,7 +87,7 @@ export default function PlanBuilderScreen() {
 
     try {
       const items = await getFullPlan(plan.planId);
-      const hydratedDraft = buildHydratedDraft(items);
+      const hydratedDraft = buildHydratedPlanDraft(items);
 
       if (!hydratedDraft) {
         setOpenDraftError('Could not load that draft plan.');
@@ -167,6 +132,11 @@ export default function PlanBuilderScreen() {
             />
             <FilterChip
               label="My Plans"
+              selected={selectedView === 'dashboard'}
+              onPress={() => setSelectedView('dashboard')}
+            />
+            <FilterChip
+              label="Saved"
               selected={selectedView === 'dashboard'}
               onPress={() => setSelectedView('dashboard')}
             />

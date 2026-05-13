@@ -12,13 +12,23 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { createDay, createPlan, createWeek, publishPlan } from '@/services/plans';
+import {
+  createBlock,
+  createDay,
+  createItem,
+  createPlan,
+  createWeek,
+  publishPlan,
+} from '@/services/plans';
 import type {
   HydratedPlanDraft,
   Plan,
+  PlanBlock,
   PlanDay,
   PlanDifficulty,
   PlanGoal,
+  PlanItem,
+  PlanItemType,
   PlanType,
   PlanWeek,
 } from '@/types';
@@ -46,6 +56,32 @@ type CreateDayDraft = {
   summary: string;
   notes: string;
   dayLabel: string;
+};
+
+type CreateBlockDraft = {
+  title: string;
+  summary: string;
+  notes: string;
+};
+
+type CreateItemDraft = {
+  itemType: PlanItemType;
+  title: string;
+  description: string;
+  sets: string;
+  reps: string;
+  durationMin: string;
+  distance: string;
+  restSeconds: string;
+  intensity: string;
+  tempo: string;
+  videoUrl: string;
+  calories: string;
+  proteinGrams: string;
+  carbsGrams: string;
+  fatGrams: string;
+  ingredients: string;
+  recipeUrl: string;
 };
 
 type PlanBuilderShellProps = {
@@ -76,6 +112,12 @@ const PLAN_DIFFICULTY_OPTIONS: { label: string; value: PlanDifficulty }[] = [
   { label: 'Advanced', value: 'advanced' },
 ];
 
+const PLAN_ITEM_TYPE_OPTIONS: { label: string; value: PlanItemType }[] = [
+  { label: 'Exercise', value: 'exercise' },
+  { label: 'Meal', value: 'meal' },
+  { label: 'Note', value: 'note' },
+];
+
 const INITIAL_CREATE_PLAN_DRAFT: CreatePlanDraft = {
   title: '',
   summary: '',
@@ -101,6 +143,32 @@ const INITIAL_CREATE_DAY_DRAFT: CreateDayDraft = {
   dayLabel: '',
 };
 
+const INITIAL_CREATE_BLOCK_DRAFT: CreateBlockDraft = {
+  title: '',
+  summary: '',
+  notes: '',
+};
+
+const INITIAL_CREATE_ITEM_DRAFT: CreateItemDraft = {
+  itemType: 'exercise',
+  title: '',
+  description: '',
+  sets: '',
+  reps: '',
+  durationMin: '',
+  distance: '',
+  restSeconds: '',
+  intensity: '',
+  tempo: '',
+  videoUrl: '',
+  calories: '',
+  proteinGrams: '',
+  carbsGrams: '',
+  fatGrams: '',
+  ingredients: '',
+  recipeUrl: '',
+};
+
 export function PlanBuilderShell({
   onPlanCreated,
   onPlanPublished,
@@ -122,6 +190,18 @@ export function PlanBuilderShell({
   const [createdDaysByWeek, setCreatedDaysByWeek] = useState<Record<string, PlanDay[]>>({});
   const [createDayLoadingWeekKey, setCreateDayLoadingWeekKey] = useState<string | null>(null);
   const [createDayErrors, setCreateDayErrors] = useState<Record<string, string | null>>({});
+  const [activeDay, setActiveDay] = useState<PlanDay | null>(null);
+  const [activeBlock, setActiveBlock] = useState<PlanBlock | null>(null);
+  const [openDayBlockForms, setOpenDayBlockForms] = useState<Record<string, boolean>>({});
+  const [createBlockDrafts, setCreateBlockDrafts] = useState<Record<string, CreateBlockDraft>>({});
+  const [createdBlocksByDay, setCreatedBlocksByDay] = useState<Record<string, PlanBlock[]>>({});
+  const [createBlockLoadingDayKey, setCreateBlockLoadingDayKey] = useState<string | null>(null);
+  const [createBlockErrors, setCreateBlockErrors] = useState<Record<string, string | null>>({});
+  const [openBlockItemForms, setOpenBlockItemForms] = useState<Record<string, boolean>>({});
+  const [createItemDrafts, setCreateItemDrafts] = useState<Record<string, CreateItemDraft>>({});
+  const [createdItemsByBlock, setCreatedItemsByBlock] = useState<Record<string, PlanItem[]>>({});
+  const [createItemLoadingBlockKey, setCreateItemLoadingBlockKey] = useState<string | null>(null);
+  const [createItemErrors, setCreateItemErrors] = useState<Record<string, string | null>>({});
   const [isPublishLoading, setIsPublishLoading] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
 
@@ -143,6 +223,41 @@ export function PlanBuilderShell({
     return `${week.planId}-${week.weekNumber}`;
   }
 
+  function getDayKey(day: Pick<PlanDay, 'planId' | 'weekNumber' | 'dayNumber'>) {
+    return `${day.planId}-${day.weekNumber}-${day.dayNumber}`;
+  }
+
+  function getBlockKey(
+    block: Pick<PlanBlock, 'planId' | 'weekNumber' | 'dayNumber' | 'blockNumber'>
+  ) {
+    return `${block.planId}-${block.weekNumber}-${block.dayNumber}-${block.blockNumber}`;
+  }
+
+  function getPreview(value: string | undefined, fallback: string, maxLength = 24) {
+    if (!value) {
+      return fallback;
+    }
+
+    return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+  }
+
+  function getItemDetails(item: PlanItem) {
+    return [
+      item.sets ? `Sets ${item.sets}` : null,
+      item.reps ? `Reps ${item.reps}` : null,
+      item.durationMin ? `${item.durationMin} min` : null,
+      item.distance ? `${item.distance} distance` : null,
+      item.restSeconds ? `${item.restSeconds}s rest` : null,
+      item.intensity ? `Intensity ${item.intensity}` : null,
+      item.tempo ? `Tempo ${item.tempo}` : null,
+      item.calories ? `${item.calories} calories` : null,
+      item.proteinGrams ? `${item.proteinGrams}g protein` : null,
+      item.carbsGrams ? `${item.carbsGrams}g carbs` : null,
+      item.fatGrams ? `${item.fatGrams}g fat` : null,
+      item.ingredients?.length ? item.ingredients.join(', ') : null,
+    ].filter((detail): detail is string => Boolean(detail));
+  }
+
   useEffect(() => {
     if (!initialDraft) {
       return;
@@ -157,14 +272,46 @@ export function PlanBuilderShell({
     const nextCreateDayErrors = Object.fromEntries(
       initialDraft.weeks.map((week) => [getWeekKey(week), null])
     );
+    const hydratedDays = Object.values(initialDraft.daysByWeek).flat();
+    const hydratedBlocks = Object.values(initialDraft.blocksByDay).flat();
+    const nextOpenDayBlockForms = Object.fromEntries(
+      hydratedDays.map((day) => [getDayKey(day), false])
+    );
+    const nextCreateBlockDrafts = Object.fromEntries(
+      hydratedDays.map((day) => [getDayKey(day), INITIAL_CREATE_BLOCK_DRAFT])
+    );
+    const nextCreateBlockErrors = Object.fromEntries(
+      hydratedDays.map((day) => [getDayKey(day), null])
+    );
+    const nextOpenBlockItemForms = Object.fromEntries(
+      hydratedBlocks.map((block) => [getBlockKey(block), false])
+    );
+    const nextCreateItemDrafts = Object.fromEntries(
+      hydratedBlocks.map((block) => [getBlockKey(block), INITIAL_CREATE_ITEM_DRAFT])
+    );
+    const nextCreateItemErrors = Object.fromEntries(
+      hydratedBlocks.map((block) => [getBlockKey(block), null])
+    );
 
     setCreatedPlan(initialDraft.plan);
     setCreatedWeeks(initialDraft.weeks);
     setCreatedDaysByWeek(initialDraft.daysByWeek);
+    setCreatedBlocksByDay(initialDraft.blocksByDay);
+    setCreatedItemsByBlock(initialDraft.itemsByBlock);
     setOpenWeekDayForms(nextOpenWeekDayForms);
     setCreateDayDrafts(nextCreateDayDrafts);
     setCreateDayErrors(nextCreateDayErrors);
     setCreateDayLoadingWeekKey(null);
+    setOpenDayBlockForms(nextOpenDayBlockForms);
+    setCreateBlockDrafts(nextCreateBlockDrafts);
+    setCreateBlockErrors(nextCreateBlockErrors);
+    setCreateBlockLoadingDayKey(null);
+    setOpenBlockItemForms(nextOpenBlockItemForms);
+    setCreateItemDrafts(nextCreateItemDrafts);
+    setCreateItemErrors(nextCreateItemErrors);
+    setCreateItemLoadingBlockKey(null);
+    setActiveDay(null);
+    setActiveBlock(null);
     setIsCreatePlanOpen(false);
     setCreatePlanDraft(INITIAL_CREATE_PLAN_DRAFT);
     setCreatePlanError(null);
@@ -187,6 +334,42 @@ export function PlanBuilderShell({
       ...current,
       [weekKey]: {
         ...(current[weekKey] ?? INITIAL_CREATE_DAY_DRAFT),
+        [key]: value,
+      },
+    }));
+  }
+
+  function getCreateBlockDraftForDay(dayKey: string) {
+    return createBlockDrafts[dayKey] ?? INITIAL_CREATE_BLOCK_DRAFT;
+  }
+
+  function updateCreateBlockDraft<Key extends keyof CreateBlockDraft>(
+    dayKey: string,
+    key: Key,
+    value: CreateBlockDraft[Key]
+  ) {
+    setCreateBlockDrafts((current) => ({
+      ...current,
+      [dayKey]: {
+        ...(current[dayKey] ?? INITIAL_CREATE_BLOCK_DRAFT),
+        [key]: value,
+      },
+    }));
+  }
+
+  function getCreateItemDraftForBlock(blockKey: string) {
+    return createItemDrafts[blockKey] ?? INITIAL_CREATE_ITEM_DRAFT;
+  }
+
+  function updateCreateItemDraft<Key extends keyof CreateItemDraft>(
+    blockKey: string,
+    key: Key,
+    value: CreateItemDraft[Key]
+  ) {
+    setCreateItemDrafts((current) => ({
+      ...current,
+      [blockKey]: {
+        ...(current[blockKey] ?? INITIAL_CREATE_ITEM_DRAFT),
         [key]: value,
       },
     }));
@@ -232,6 +415,18 @@ export function PlanBuilderShell({
       setCreatedDaysByWeek({});
       setCreateDayErrors({});
       setCreateDayLoadingWeekKey(null);
+      setActiveDay(null);
+      setActiveBlock(null);
+      setOpenDayBlockForms({});
+      setCreateBlockDrafts({});
+      setCreatedBlocksByDay({});
+      setCreateBlockErrors({});
+      setCreateBlockLoadingDayKey(null);
+      setOpenBlockItemForms({});
+      setCreateItemDrafts({});
+      setCreatedItemsByBlock({});
+      setCreateItemErrors({});
+      setCreateItemLoadingBlockKey(null);
       setIsCreateWeekOpen(false);
       setCreateWeekDraft(INITIAL_CREATE_WEEK_DRAFT);
       setCreateWeekError(null);
@@ -309,6 +504,18 @@ export function PlanBuilderShell({
       setCreatedDaysByWeek({});
       setCreateDayErrors({});
       setCreateDayLoadingWeekKey(null);
+      setActiveDay(null);
+      setActiveBlock(null);
+      setOpenDayBlockForms({});
+      setCreateBlockDrafts({});
+      setCreatedBlocksByDay({});
+      setCreateBlockErrors({});
+      setCreateBlockLoadingDayKey(null);
+      setOpenBlockItemForms({});
+      setCreateItemDrafts({});
+      setCreatedItemsByBlock({});
+      setCreateItemErrors({});
+      setCreateItemLoadingBlockKey(null);
       setIsCreateWeekOpen(false);
       setCreateWeekDraft(INITIAL_CREATE_WEEK_DRAFT);
     } catch (error) {
@@ -352,6 +559,11 @@ export function PlanBuilderShell({
         ...current,
         [weekKey]: [...(current[weekKey] ?? []), nextDay],
       }));
+      const dayKey = getDayKey(nextDay);
+      setOpenDayBlockForms((current) => ({ ...current, [dayKey]: false }));
+      setCreateBlockDrafts((current) => ({ ...current, [dayKey]: INITIAL_CREATE_BLOCK_DRAFT }));
+      setCreatedBlocksByDay((current) => ({ ...current, [dayKey]: [] }));
+      setCreateBlockErrors((current) => ({ ...current, [dayKey]: null }));
       setCreateDayDrafts((current) => ({ ...current, [weekKey]: INITIAL_CREATE_DAY_DRAFT }));
       setOpenWeekDayForms((current) => ({ ...current, [weekKey]: false }));
       setPublishError(null);
@@ -363,6 +575,769 @@ export function PlanBuilderShell({
     } finally {
       setCreateDayLoadingWeekKey(null);
     }
+  }
+
+  async function handleCreateBlock(day: PlanDay) {
+    if (!createdPlan) {
+      return;
+    }
+
+    const dayKey = getDayKey(day);
+    const draft = getCreateBlockDraftForDay(dayKey);
+    const title = draft.title.trim();
+    const summary = draft.summary.trim();
+
+    if (!title || !summary) {
+      setCreateBlockErrors((current) => ({
+        ...current,
+        [dayKey]: 'Add a title and summary before creating a block.',
+      }));
+      return;
+    }
+
+    setCreateBlockLoadingDayKey(dayKey);
+    setCreateBlockErrors((current) => ({ ...current, [dayKey]: null }));
+
+    try {
+      const nextBlock = await createBlock({
+        planId: createdPlan.planId,
+        weekNumber: day.weekNumber,
+        dayNumber: day.dayNumber,
+        title,
+        summary,
+        notes: draft.notes.trim() || undefined,
+      });
+      const blockKey = getBlockKey(nextBlock);
+
+      setCreatedBlocksByDay((current) => ({
+        ...current,
+        [dayKey]: [...(current[dayKey] ?? []), nextBlock],
+      }));
+      setOpenBlockItemForms((current) => ({ ...current, [blockKey]: false }));
+      setCreateItemDrafts((current) => ({ ...current, [blockKey]: INITIAL_CREATE_ITEM_DRAFT }));
+      setCreatedItemsByBlock((current) => ({ ...current, [blockKey]: [] }));
+      setCreateItemErrors((current) => ({ ...current, [blockKey]: null }));
+      setCreateBlockDrafts((current) => ({
+        ...current,
+        [dayKey]: INITIAL_CREATE_BLOCK_DRAFT,
+      }));
+      setOpenDayBlockForms((current) => ({ ...current, [dayKey]: false }));
+      setPublishError(null);
+    } catch (error) {
+      setCreateBlockErrors((current) => ({
+        ...current,
+        [dayKey]: error instanceof Error ? error.message : 'Unable to create block.',
+      }));
+    } finally {
+      setCreateBlockLoadingDayKey(null);
+    }
+  }
+
+  async function handleCreateItem(block: PlanBlock) {
+    if (!createdPlan) {
+      return;
+    }
+
+    const blockKey = getBlockKey(block);
+    const draft = getCreateItemDraftForBlock(blockKey);
+    const title = draft.title.trim();
+
+    if (!title) {
+      setCreateItemErrors((current) => ({
+        ...current,
+        [blockKey]: 'Add a title before creating an item.',
+      }));
+      return;
+    }
+
+    setCreateItemLoadingBlockKey(blockKey);
+    setCreateItemErrors((current) => ({ ...current, [blockKey]: null }));
+
+    try {
+      const nextItem = await createItem({
+        planId: createdPlan.planId,
+        weekNumber: block.weekNumber,
+        dayNumber: block.dayNumber,
+        blockNumber: block.blockNumber,
+        itemType: draft.itemType,
+        title,
+        description: draft.description.trim() || undefined,
+        sets: draft.sets.trim() || undefined,
+        reps: draft.reps.trim() || undefined,
+        durationMin: draft.durationMin.trim() || undefined,
+        distance: draft.distance.trim() || undefined,
+        restSeconds: draft.restSeconds.trim() || undefined,
+        intensity: draft.intensity.trim() || undefined,
+        tempo: draft.tempo.trim() || undefined,
+        videoUrl: draft.videoUrl.trim() || undefined,
+        calories: draft.calories.trim() || undefined,
+        proteinGrams: draft.proteinGrams.trim() || undefined,
+        carbsGrams: draft.carbsGrams.trim() || undefined,
+        fatGrams: draft.fatGrams.trim() || undefined,
+        ingredients: draft.ingredients.trim()
+          ? draft.ingredients
+              .split(',')
+              .map((ingredient) => ingredient.trim())
+              .filter(Boolean)
+          : undefined,
+        recipeUrl: draft.recipeUrl.trim() || undefined,
+      });
+
+      setCreatedItemsByBlock((current) => ({
+        ...current,
+        [blockKey]: [...(current[blockKey] ?? []), nextItem],
+      }));
+      setCreateItemDrafts((current) => ({ ...current, [blockKey]: INITIAL_CREATE_ITEM_DRAFT }));
+      setOpenBlockItemForms((current) => ({ ...current, [blockKey]: false }));
+      setPublishError(null);
+    } catch (error) {
+      setCreateItemErrors((current) => ({
+        ...current,
+        [blockKey]: error instanceof Error ? error.message : 'Unable to create item.',
+      }));
+    } finally {
+      setCreateItemLoadingBlockKey(null);
+    }
+  }
+
+  if (createdPlan && activeBlock) {
+    const blockKey = getBlockKey(activeBlock);
+    const itemDraft = getCreateItemDraftForBlock(blockKey);
+    const savedItems = createdItemsByBlock[blockKey] ?? [];
+
+    return (
+      <ThemedView type="backgroundElement" style={styles.builderCard}>
+        <View style={styles.builderHeader}>
+          <View style={styles.builderHeaderCopy}>
+            <ThemedText type="smallBold">
+              Block {activeBlock.blockNumber}: {activeBlock.title}
+            </ThemedText>
+            <ThemedText themeColor="textSecondary">
+              Week {activeBlock.weekNumber} / Day {activeBlock.dayNumber} / Items
+            </ThemedText>
+          </View>
+          <Pressable
+            onPress={() => setActiveBlock(null)}
+            style={({ pressed }) => [styles.toggleButton, pressed ? styles.pressed : null]}>
+            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              Back to Day
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        <View style={styles.snapshotContent}>
+          <ThemedText themeColor="textSecondary">{activeBlock.summary}</ThemedText>
+          {activeBlock.notes ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {activeBlock.notes}
+            </ThemedText>
+          ) : null}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.builderHeader}>
+          <View style={styles.builderHeaderCopy}>
+            <ThemedText type="smallBold">Items</ThemedText>
+            <ThemedText themeColor="textSecondary">
+              Add exercises, meals, or notes inside this block.
+            </ThemedText>
+          </View>
+          <Pressable
+            onPress={() =>
+              setOpenBlockItemForms((current) => ({
+                ...current,
+                [blockKey]: !current[blockKey],
+              }))
+            }
+            style={({ pressed }) => [styles.toggleButton, pressed ? styles.pressed : null]}>
+            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              {openBlockItemForms[blockKey] ? 'Hide' : '+ Add Item'}
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        {openBlockItemForms[blockKey] ? (
+          <View style={styles.formSection}>
+            <View style={styles.fieldGroup}>
+              <ThemedText type="smallBold">Item type</ThemedText>
+              <View style={styles.optionWrap}>
+                {PLAN_ITEM_TYPE_OPTIONS.map((option) => (
+                  <FilterChip
+                    key={option.value}
+                    label={option.label}
+                    selected={itemDraft.itemType === option.value}
+                    onPress={() => updateCreateItemDraft(blockKey, 'itemType', option.value)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText type="smallBold">Item title</ThemedText>
+              <TextInput
+                value={itemDraft.title}
+                onChangeText={(value) => updateCreateItemDraft(blockKey, 'title', value)}
+                placeholder="Push Ups"
+                placeholderTextColor={theme.textSecondary}
+                style={[
+                  styles.textInput,
+                  {
+                    color: theme.text,
+                    borderColor: theme.backgroundSelected,
+                    backgroundColor: theme.background,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText type="smallBold">Description (optional)</ThemedText>
+              <TextInput
+                value={itemDraft.description}
+                onChangeText={(value) => updateCreateItemDraft(blockKey, 'description', value)}
+                placeholder="Add coaching notes, meal context, or setup details."
+                placeholderTextColor={theme.textSecondary}
+                multiline
+                style={[
+                  styles.textInput,
+                  styles.multilineInput,
+                  {
+                    color: theme.text,
+                    borderColor: theme.backgroundSelected,
+                    backgroundColor: theme.background,
+                  },
+                ]}
+              />
+            </View>
+
+            {itemDraft.itemType === 'exercise' ? (
+              <>
+                <View style={styles.twoColumnFields}>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Sets</ThemedText>
+                    <TextInput
+                      value={itemDraft.sets}
+                      onChangeText={(value) => updateCreateItemDraft(blockKey, 'sets', value)}
+                      placeholder="3"
+                      placeholderTextColor={theme.textSecondary}
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Reps</ThemedText>
+                    <TextInput
+                      value={itemDraft.reps}
+                      onChangeText={(value) => updateCreateItemDraft(blockKey, 'reps', value)}
+                      placeholder="8-10"
+                      placeholderTextColor={theme.textSecondary}
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.twoColumnFields}>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Duration min</ThemedText>
+                    <TextInput
+                      value={itemDraft.durationMin}
+                      onChangeText={(value) =>
+                        updateCreateItemDraft(blockKey, 'durationMin', value)
+                      }
+                      placeholder="20"
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="number-pad"
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Rest sec</ThemedText>
+                    <TextInput
+                      value={itemDraft.restSeconds}
+                      onChangeText={(value) =>
+                        updateCreateItemDraft(blockKey, 'restSeconds', value)
+                      }
+                      placeholder="60"
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="number-pad"
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <ThemedText type="smallBold">Distance / intensity / tempo / video</ThemedText>
+                  <TextInput
+                    value={itemDraft.distance}
+                    onChangeText={(value) => updateCreateItemDraft(blockKey, 'distance', value)}
+                    placeholder="Distance"
+                    placeholderTextColor={theme.textSecondary}
+                    style={[
+                      styles.textInput,
+                      {
+                        color: theme.text,
+                        borderColor: theme.backgroundSelected,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                  />
+                  <TextInput
+                    value={itemDraft.intensity}
+                    onChangeText={(value) => updateCreateItemDraft(blockKey, 'intensity', value)}
+                    placeholder="Intensity"
+                    placeholderTextColor={theme.textSecondary}
+                    style={[
+                      styles.textInput,
+                      {
+                        color: theme.text,
+                        borderColor: theme.backgroundSelected,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                  />
+                  <TextInput
+                    value={itemDraft.tempo}
+                    onChangeText={(value) => updateCreateItemDraft(blockKey, 'tempo', value)}
+                    placeholder="Tempo"
+                    placeholderTextColor={theme.textSecondary}
+                    style={[
+                      styles.textInput,
+                      {
+                        color: theme.text,
+                        borderColor: theme.backgroundSelected,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                  />
+                  <TextInput
+                    value={itemDraft.videoUrl}
+                    onChangeText={(value) => updateCreateItemDraft(blockKey, 'videoUrl', value)}
+                    placeholder="Video URL"
+                    placeholderTextColor={theme.textSecondary}
+                    autoCapitalize="none"
+                    style={[
+                      styles.textInput,
+                      {
+                        color: theme.text,
+                        borderColor: theme.backgroundSelected,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                  />
+                </View>
+              </>
+            ) : null}
+
+            {itemDraft.itemType === 'meal' ? (
+              <>
+                <View style={styles.twoColumnFields}>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Calories</ThemedText>
+                    <TextInput
+                      value={itemDraft.calories}
+                      onChangeText={(value) => updateCreateItemDraft(blockKey, 'calories', value)}
+                      placeholder="500"
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="number-pad"
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Protein g</ThemedText>
+                    <TextInput
+                      value={itemDraft.proteinGrams}
+                      onChangeText={(value) =>
+                        updateCreateItemDraft(blockKey, 'proteinGrams', value)
+                      }
+                      placeholder="35"
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="number-pad"
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.twoColumnFields}>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Carbs g</ThemedText>
+                    <TextInput
+                      value={itemDraft.carbsGrams}
+                      onChangeText={(value) =>
+                        updateCreateItemDraft(blockKey, 'carbsGrams', value)
+                      }
+                      placeholder="45"
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="number-pad"
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <ThemedText type="smallBold">Fat g</ThemedText>
+                    <TextInput
+                      value={itemDraft.fatGrams}
+                      onChangeText={(value) => updateCreateItemDraft(blockKey, 'fatGrams', value)}
+                      placeholder="18"
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="number-pad"
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.text,
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <ThemedText type="smallBold">Ingredients (optional)</ThemedText>
+                  <TextInput
+                    value={itemDraft.ingredients}
+                    onChangeText={(value) => updateCreateItemDraft(blockKey, 'ingredients', value)}
+                    placeholder="Chicken, rice, vegetables"
+                    placeholderTextColor={theme.textSecondary}
+                    style={[
+                      styles.textInput,
+                      {
+                        color: theme.text,
+                        borderColor: theme.backgroundSelected,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <ThemedText type="smallBold">Recipe URL (optional)</ThemedText>
+                  <TextInput
+                    value={itemDraft.recipeUrl}
+                    onChangeText={(value) => updateCreateItemDraft(blockKey, 'recipeUrl', value)}
+                    placeholder="https://..."
+                    placeholderTextColor={theme.textSecondary}
+                    autoCapitalize="none"
+                    style={[
+                      styles.textInput,
+                      {
+                        color: theme.text,
+                        borderColor: theme.backgroundSelected,
+                        backgroundColor: theme.background,
+                      },
+                    ]}
+                  />
+                </View>
+              </>
+            ) : null}
+
+            {createItemErrors[blockKey] ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {createItemErrors[blockKey]}
+              </ThemedText>
+            ) : null}
+
+            <Pressable
+              onPress={() => handleCreateItem(activeBlock)}
+              disabled={createItemLoadingBlockKey === blockKey}
+              style={({ pressed }) => [
+                styles.submitButton,
+                { backgroundColor: theme.accent },
+                pressed || createItemLoadingBlockKey === blockKey ? styles.pressed : null,
+              ]}>
+              {createItemLoadingBlockKey === blockKey ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <ThemedText type="smallBold" style={styles.submitButtonText}>
+                  Create Item
+                </ThemedText>
+              )}
+            </Pressable>
+          </View>
+        ) : null}
+
+        {savedItems.length ? (
+          <View style={styles.dayList}>
+            {savedItems.map((item) => {
+              const itemDetails = getItemDetails(item);
+
+              return (
+                <ThemedView
+                  key={`${item.planId}-${item.weekNumber}-${item.dayNumber}-${item.blockNumber}-${item.order}-${item.createdAt}`}
+                  type="background"
+                  style={styles.childCard}>
+                  <View style={styles.childHeader}>
+                    <ThemedText type="smallBold">
+                      Item {item.order}: {getPreview(item.title, 'Untitled item', 22)}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {item.itemType}
+                    </ThemedText>
+                  </View>
+                  {item.description ? (
+                    <ThemedText themeColor="textSecondary">{item.description}</ThemedText>
+                  ) : null}
+                  {itemDetails.length ? (
+                    <View style={styles.snapshotMetaRow}>
+                      {itemDetails.map((detail, index) => (
+                        <ThemedText
+                          key={`${detail}-${index}`}
+                          type="small"
+                          themeColor="textSecondary">
+                          {detail}
+                        </ThemedText>
+                      ))}
+                    </View>
+                  ) : null}
+                </ThemedView>
+              );
+            })}
+          </View>
+        ) : (
+          <ThemedText themeColor="textSecondary">
+            No items in this block yet.
+          </ThemedText>
+        )}
+      </ThemedView>
+    );
+  }
+
+  if (createdPlan && activeDay) {
+    const dayKey = getDayKey(activeDay);
+    const blockDraft = getCreateBlockDraftForDay(dayKey);
+    const savedBlocks = createdBlocksByDay[dayKey] ?? [];
+
+    return (
+      <ThemedView type="backgroundElement" style={styles.builderCard}>
+        <View style={styles.builderHeader}>
+          <View style={styles.builderHeaderCopy}>
+            <ThemedText type="smallBold">
+              Day {activeDay.dayNumber}: {activeDay.title ?? 'Untitled'}
+            </ThemedText>
+            <ThemedText themeColor="textSecondary">
+              Week {activeDay.weekNumber} / Blocks
+            </ThemedText>
+          </View>
+          <Pressable
+            onPress={() => {
+              setActiveBlock(null);
+              setActiveDay(null);
+            }}
+            style={({ pressed }) => [styles.toggleButton, pressed ? styles.pressed : null]}>
+            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              Back to Plan
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        <View style={styles.snapshotContent}>
+          {activeDay.dayLabel ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {activeDay.dayLabel}
+            </ThemedText>
+          ) : null}
+          {activeDay.summary ? (
+            <ThemedText themeColor="textSecondary">{activeDay.summary}</ThemedText>
+          ) : null}
+          {activeDay.notes ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {activeDay.notes}
+            </ThemedText>
+          ) : null}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.builderHeader}>
+          <View style={styles.builderHeaderCopy}>
+            <ThemedText type="smallBold">Blocks</ThemedText>
+            <ThemedText themeColor="textSecondary">
+              Add the sections or timespans that make up this day.
+            </ThemedText>
+          </View>
+          <Pressable
+            onPress={() =>
+              setOpenDayBlockForms((current) => ({
+                ...current,
+                [dayKey]: !current[dayKey],
+              }))
+            }
+            style={({ pressed }) => [styles.toggleButton, pressed ? styles.pressed : null]}>
+            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              {openDayBlockForms[dayKey] ? 'Hide' : '+ Add Block'}
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        {openDayBlockForms[dayKey] ? (
+          <View style={styles.formSection}>
+            <View style={styles.fieldGroup}>
+              <ThemedText type="smallBold">Block title</ThemedText>
+              <TextInput
+                value={blockDraft.title}
+                onChangeText={(value) => updateCreateBlockDraft(dayKey, 'title', value)}
+                placeholder="Morning"
+                placeholderTextColor={theme.textSecondary}
+                style={[
+                  styles.textInput,
+                  {
+                    color: theme.text,
+                    borderColor: theme.backgroundSelected,
+                    backgroundColor: theme.background,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText type="smallBold">Block summary</ThemedText>
+              <TextInput
+                value={blockDraft.summary}
+                onChangeText={(value) => updateCreateBlockDraft(dayKey, 'summary', value)}
+                placeholder="Describe what this part of the day includes."
+                placeholderTextColor={theme.textSecondary}
+                multiline
+                style={[
+                  styles.textInput,
+                  styles.multilineInput,
+                  {
+                    color: theme.text,
+                    borderColor: theme.backgroundSelected,
+                    backgroundColor: theme.background,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <ThemedText type="smallBold">Notes (optional)</ThemedText>
+              <TextInput
+                value={blockDraft.notes}
+                onChangeText={(value) => updateCreateBlockDraft(dayKey, 'notes', value)}
+                placeholder="Any extra context for this block."
+                placeholderTextColor={theme.textSecondary}
+                multiline
+                style={[
+                  styles.textInput,
+                  styles.multilineInput,
+                  {
+                    color: theme.text,
+                    borderColor: theme.backgroundSelected,
+                    backgroundColor: theme.background,
+                  },
+                ]}
+              />
+            </View>
+
+            {createBlockErrors[dayKey] ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {createBlockErrors[dayKey]}
+              </ThemedText>
+            ) : null}
+
+            <Pressable
+              onPress={() => handleCreateBlock(activeDay)}
+              disabled={createBlockLoadingDayKey === dayKey}
+              style={({ pressed }) => [
+                styles.submitButton,
+                { backgroundColor: theme.accent },
+                pressed || createBlockLoadingDayKey === dayKey ? styles.pressed : null,
+              ]}>
+              {createBlockLoadingDayKey === dayKey ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <ThemedText type="smallBold" style={styles.submitButtonText}>
+                  Create Block
+                </ThemedText>
+              )}
+            </Pressable>
+          </View>
+        ) : null}
+
+        {savedBlocks.length ? (
+          <View style={styles.dayList}>
+            {savedBlocks.map((block) => (
+              <Pressable
+                key={`${block.planId}-${block.weekNumber}-${block.dayNumber}-${block.blockNumber}-${block.createdAt}`}
+                onPress={() => setActiveBlock(block)}
+                style={({ pressed }) => [pressed ? styles.pressed : null]}>
+                <ThemedView type="background" style={styles.childCard}>
+                  <View style={styles.childHeader}>
+                    <ThemedText type="smallBold">
+                      Block {block.blockNumber}: {getPreview(block.title, 'Untitled block', 22)}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {createdItemsByBlock[getBlockKey(block)]?.length ?? 0} items
+                    </ThemedText>
+                  </View>
+                  <ThemedText themeColor="textSecondary">{block.summary}</ThemedText>
+                  {block.notes ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {block.notes}
+                    </ThemedText>
+                  ) : null}
+                  <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                    Manage Items
+                  </ThemedText>
+                </ThemedView>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <ThemedText themeColor="textSecondary">
+            No blocks in this day yet.
+          </ThemedText>
+        )}
+      </ThemedView>
+    );
   }
 
   if (createdPlan) {
@@ -656,32 +1631,40 @@ export function PlanBuilderShell({
                   {(createdDaysByWeek[getWeekKey(week)] ?? []).length ? (
                     <View style={styles.dayList}>
                       {(createdDaysByWeek[getWeekKey(week)] ?? []).map((day) => (
-                        <ThemedView
+                        <Pressable
                           key={`${day.planId}-${day.weekNumber}-${day.dayNumber}-${day.createdAt}`}
-                          type="backgroundElement"
-                          style={styles.grandChildCard}>
-                          <View style={styles.childHeader}>
-                            <ThemedText type="smallBold">
-                              Day {day.dayNumber}: {day?.title?.slice(0, 18) + "..." || 'Untitled'}
+                          onPress={() => {
+                            setActiveBlock(null);
+                            setActiveDay(day);
+                          }}
+                          style={({ pressed }) => [pressed ? styles.pressed : null]}>
+                          <ThemedView type="backgroundElement" style={styles.grandChildCard}>
+                            <View style={styles.childHeader}>
+                              <ThemedText type="smallBold">
+                                Day {day.dayNumber}: {getPreview(day.title, 'Untitled', 18)}
+                              </ThemedText>
+                              <ThemedText type="small" themeColor="textSecondary">
+                                {createdBlocksByDay[getDayKey(day)]?.length ?? 0} blocks
+                              </ThemedText>
+                            </View>
+                            {day.dayLabel ? (
+                              <ThemedText type="small" themeColor="textSecondary">
+                                {day.dayLabel}
+                              </ThemedText>
+                            ) : null}
+                            {day.summary ? (
+                              <ThemedText themeColor="textSecondary">{day.summary}</ThemedText>
+                            ) : null}
+                            {day.notes ? (
+                              <ThemedText type="small" themeColor="textSecondary">
+                                {day.notes}
+                              </ThemedText>
+                            ) : null}
+                            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                              Build Blocks
                             </ThemedText>
-                            <ThemedText type="small" themeColor="textSecondary">
-                              Saved
-                            </ThemedText>
-                          </View>
-                          {day.dayLabel ? (
-                            <ThemedText type="small" themeColor="textSecondary">
-                              {day.dayLabel}
-                            </ThemedText>
-                          ) : null}
-                          {day.summary ? (
-                            <ThemedText themeColor="textSecondary">{day.summary}</ThemedText>
-                          ) : null}
-                          {day.notes ? (
-                            <ThemedText type="small" themeColor="textSecondary">
-                              {day.notes}
-                            </ThemedText>
-                          ) : null}
-                        </ThemedView>
+                          </ThemedView>
+                        </Pressable>
                       ))}
                     </View>
                   ) : null}
@@ -956,6 +1939,9 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   fieldGroup: {
+    gap: Spacing.two,
+  },
+  twoColumnFields: {
     gap: Spacing.two,
   },
   textInput: {
