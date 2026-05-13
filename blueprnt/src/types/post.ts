@@ -24,6 +24,7 @@ export type Post = {
   distance?: string | number; // I can translate to other units based off settings later, for now Miles
   duration?: string | number; // in Minutes
   imageUrl?: string;
+  imageKey?: string;
   caption?: string;
   visibility: PostVisibility; // friends is default
   planId?: string;
