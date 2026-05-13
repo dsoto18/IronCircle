@@ -11,7 +11,8 @@ export type CreatePostInput = {
   distance: string;
   calories: string;
   duration: string;
-  imageUrl: string;
+  imageUrl?: string;
+  imageKey?: string;
   caption: string;
 };
 
@@ -39,17 +40,19 @@ export async function createPost({
   calories,
   duration,
   imageUrl,
+  imageKey,
   caption,
 }: CreatePostInput) {
   const body: Record<string, string> = {
     type,
     duration: duration.trim(),
-    imageUrl: imageUrl.trim(),
     caption: caption.trim(),
     visibility: 'followers',
   };
   const normalizedDistance = normalizeOptionalMetric(distance);
   const normalizedCalories = normalizeOptionalMetric(calories);
+  const normalizedImageUrl = imageUrl?.trim();
+  const normalizedImageKey = imageKey?.trim();
 
   if (normalizedDistance !== null) {
     body.distance = normalizedDistance;
@@ -57,6 +60,14 @@ export async function createPost({
 
   if (normalizedCalories !== null) {
     body.calories = normalizedCalories;
+  }
+
+  if (normalizedImageUrl) {
+    body.imageUrl = normalizedImageUrl;
+  }
+
+  if (normalizedImageKey) {
+    body.imageKey = normalizedImageKey;
   }
 
   const response = await client.post<CreatePostResponse>('/posts', body, {
