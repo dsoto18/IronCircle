@@ -17,6 +17,7 @@ export type UpdateUserProfileInput = {
   firstName?: string;
   lastName?: string;
   bio?: string;
+  profilePictureUrl?: string;
 };
 
 export type UserSearchResult = {
