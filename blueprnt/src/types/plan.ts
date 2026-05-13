@@ -15,6 +15,8 @@ export type PlanStatus = 'draft' | 'published' | 'archived'; // For creator-faci
 
 export type ProgressStatus = 'waiting' | 'started' | 'in-progress' | 'done'; // Future use for User-Progress Tracking
 
+export type PlanItemType = 'exercise' | 'meal' | 'note';
+
 export type Plan = {
   planId: string;
   userId: string;
@@ -64,6 +66,53 @@ export type PlanDay = {
   updatedAt: string;
 };
 
+export type PlanBlock = {
+  PK: string;
+  SK: string;
+  entity: 'PlanBlock';
+  blockNumber: number;
+  createdAt: string;
+  updatedAt: string;
+  planId: string;
+  userId: string;
+  weekNumber: number;
+  dayNumber: number;
+  title: string;
+  summary: string;
+  notes?: string;
+};
+
+export type PlanItem = {
+  PK: string;
+  SK: string;
+  order: number;
+  entity: 'PlanItem';
+  createdAt: string;
+  updatedAt: string;
+  planId: string;
+  userId: string;
+  weekNumber: number;
+  dayNumber: number;
+  blockNumber: number;
+  itemType: PlanItemType;
+  title: string;
+  description?: string;
+  sets?: string;
+  reps?: string;
+  durationMin?: string;
+  distance?: string;
+  restSeconds?: string;
+  intensity?: string;
+  tempo?: string;
+  videoUrl?: string;
+  calories?: string;
+  proteinGrams?: string;
+  carbsGrams?: string;
+  fatGrams?: string;
+  ingredients?: string[];
+  recipeUrl?: string;
+};
+
 export type UserPlan = {
   PK: string;
   SK: string;
@@ -79,9 +128,13 @@ export type HydratedPlanDraft = {
   plan: Plan;
   weeks: PlanWeek[];
   daysByWeek: Record<string, PlanDay[]>;
+  blocksByDay: Record<string, PlanBlock[]>;
+  itemsByBlock: Record<string, PlanItem[]>;
 };
 
 export type FullPlanItem =
   | (Plan & { PK: string; SK: string; entity: 'Plan' })
   | PlanWeek
-  | PlanDay;
+  | PlanDay
+  | PlanBlock
+  | PlanItem;
