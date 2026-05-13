@@ -11,10 +11,32 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getFullPlan, getUserPlans } from '@/services/plans';
-import type { FullPlanItem, HydratedPlanDraft, PlanDay, PlanWeek, UserPlan } from '@/types';
+import type {
+  FullPlanItem,
+  HydratedPlanDraft,
+  PlanBlock,
+  PlanDay,
+  PlanItem,
+  PlanWeek,
+  UserPlan,
+} from '@/types';
 
 type BuilderView = 'builder' | 'dashboard';
 type FullPlanMeta = Extract<FullPlanItem, { entity: 'Plan' }>;
+
+function getWeekKey(week: Pick<PlanWeek, 'planId' | 'weekNumber'>) {
+  return `${week.planId}-${week.weekNumber}`;
+}
+
+function getDayKey(day: Pick<PlanDay, 'planId' | 'weekNumber' | 'dayNumber'>) {
+  return `${day.planId}-${day.weekNumber}-${day.dayNumber}`;
+}
+
+function getBlockKey(
+  block: Pick<PlanBlock, 'planId' | 'weekNumber' | 'dayNumber' | 'blockNumber'>
+) {
+  return `${block.planId}-${block.weekNumber}-${block.dayNumber}-${block.blockNumber}`;
+}
 
 export default function PlanBuilderScreen() {
   const router = useRouter();
@@ -99,9 +121,47 @@ export default function PlanBuilderScreen() {
       .filter((item): item is PlanDay => item.entity === 'PlanDay')
       .sort((a, b) => (a.weekNumber - b.weekNumber) || (a.dayNumber - b.dayNumber));
 
+    const blocks = items
+      .filter((item): item is PlanBlock => item.entity === 'PlanBlock')
+      .sort(
+        (a, b) =>
+          a.weekNumber - b.weekNumber ||
+          a.dayNumber - b.dayNumber ||
+          a.blockNumber - b.blockNumber
+      );
+
+    const planItems = items
+      .filter((item): item is PlanItem => item.entity === 'PlanItem')
+      .sort(
+        (a, b) =>
+          a.weekNumber - b.weekNumber ||
+          a.dayNumber - b.dayNumber ||
+          a.blockNumber - b.blockNumber ||
+          a.order - b.order
+      );
+
     const daysByWeek = weeks.reduce<Record<string, PlanDay[]>>((acc, week) => {
-      const weekKey = `${week.planId}-${week.weekNumber}`;
+      const weekKey = getWeekKey(week);
       acc[weekKey] = days.filter((day) => day.weekNumber === week.weekNumber);
+      return acc;
+    }, {});
+
+    const blocksByDay = days.reduce<Record<string, PlanBlock[]>>((acc, day) => {
+      const dayKey = getDayKey(day);
+      acc[dayKey] = blocks.filter(
+        (block) => block.weekNumber === day.weekNumber && block.dayNumber === day.dayNumber
+      );
+      return acc;
+    }, {});
+
+    const itemsByBlock = blocks.reduce<Record<string, PlanItem[]>>((acc, block) => {
+      const blockKey = getBlockKey(block);
+      acc[blockKey] = planItems.filter(
+        (item) =>
+          item.weekNumber === block.weekNumber &&
+          item.dayNumber === block.dayNumber &&
+          item.blockNumber === block.blockNumber
+      );
       return acc;
     }, {});
 
@@ -109,6 +169,8 @@ export default function PlanBuilderScreen() {
       plan,
       weeks,
       daysByWeek,
+      blocksByDay,
+      itemsByBlock,
     };
   }
 
