@@ -25,9 +25,10 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   createPostImageUploadUrl,
-  isPostImageContentType,
+  getBlobFromUri,
+  getSupportedImageContentType,
   uploadImageBlobToUrl,
-  type PostImageContentType,
+  type ImageContentType,
 } from '@/services/media';
 import { createPost, POST_TYPES, type CreatePostType } from '@/services/posts';
 
@@ -40,48 +41,8 @@ type SubmitPhase = 'idle' | 'uploading' | 'posting';
 
 type SelectedPostImage = {
   uri: string;
-  contentType: PostImageContentType;
+  contentType: ImageContentType;
 };
-
-const IMAGE_CONTENT_TYPE_BY_EXTENSION: Record<string, PostImageContentType> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-};
-
-function inferPostImageContentType(asset: ImagePicker.ImagePickerAsset) {
-  const normalizedMimeType = asset.mimeType?.toLowerCase();
-
-  if (normalizedMimeType === 'image/jpg') {
-    return 'image/jpeg';
-  }
-
-  if (isPostImageContentType(normalizedMimeType)) {
-    return normalizedMimeType;
-  }
-
-  for (const candidate of [asset.fileName, asset.uri.split('?')[0]]) {
-    const extension = candidate?.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1];
-    const contentType = extension ? IMAGE_CONTENT_TYPE_BY_EXTENSION[extension] : undefined;
-
-    if (contentType) {
-      return contentType;
-    }
-  }
-
-  return null;
-}
-
-async function getBlobFromUri(uri: string) {
-  const response = await fetch(uri);
-
-  if (!response.ok && response.status !== 0) {
-    throw new Error('Could not read the selected image.');
-  }
-
-  return response.blob();
-}
 
 function FormInput({ label, fieldStyle, multiline, style, ...inputProps }: FormInputProps) {
   const theme = useTheme();
@@ -160,7 +121,11 @@ export default function CreatePostScreen() {
       }
 
       const asset = result.assets[0];
-      const contentType = inferPostImageContentType(asset);
+      const contentType = getSupportedImageContentType({
+        mimeType: asset.mimeType,
+        fileName: asset.fileName,
+        uri: asset.uri,
+      });
 
       if (!contentType) {
         setErrorMessage('Choose a JPEG, PNG, or WebP image.');

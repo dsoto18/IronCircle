@@ -1,4 +1,6 @@
 import { FontAwesome } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -7,6 +9,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -17,10 +20,24 @@ import { ProfileScreen, ProfileStateScreen } from '@/components/profile-screen';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getUserFollowers, getUserFollowing } from '@/services/follows';
+import {
+  createProfileImageUploadUrl,
+  getBlobFromUri,
+  getSupportedImageContentType,
+  uploadImageBlobToUrl,
+  type ImageContentType,
+} from '@/services/media';
 import { getMe, updateUserProfile, type UpdateUserProfileInput } from '@/services/user';
 import type { User } from '@/types';
 
 const BIO_MAX_LENGTH = 160;
+
+type EditSubmitPhase = 'idle' | 'uploading' | 'saving';
+
+type SelectedProfileImage = {
+  uri: string;
+  contentType: ImageContentType;
+};
 
 function getUpdatedUser(response: any, currentUser: User, payload: UpdateUserProfileInput) {
   if (response && typeof response === 'object' && 'Item' in response) {
@@ -54,8 +71,20 @@ export default function CurrentUserProfileRoute() {
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [selectedProfileImage, setSelectedProfileImage] = useState<SelectedProfileImage | null>(
+    null
+  );
+  const [isPickingProfileImage, setIsPickingProfileImage] = useState(false);
+  const [editSubmitPhase, setEditSubmitPhase] = useState<EditSubmitPhase>('idle');
   const [editErrorMessage, setEditErrorMessage] = useState<string | null>(null);
-  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const isSubmittingEdit = editSubmitPhase !== 'idle';
+  const isEditBusy = isSubmittingEdit || isPickingProfileImage;
+  const editSaveLabel =
+    editSubmitPhase === 'uploading'
+      ? 'Uploading...'
+      : editSubmitPhase === 'saving'
+        ? 'Saving...'
+        : 'Save';
 
   useEffect(() => {
     let isMounted = true;
@@ -119,20 +148,77 @@ export default function CurrentUserProfileRoute() {
     setEditFirstName('');
     setEditLastName('');
     setEditBio('');
+    setSelectedProfileImage(null);
     setEditErrorMessage(null);
+    setEditSubmitPhase('idle');
     setIsEditOpen(true);
   }
 
   function handleEditClose() {
-    if (isSubmittingEdit) {
+    if (isEditBusy) {
       return;
     }
 
     setIsEditOpen(false);
   }
 
+  async function handlePickProfileImage() {
+    if (isEditBusy) {
+      return;
+    }
+
+    setIsPickingProfileImage(true);
+    setEditErrorMessage(null);
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        allowsMultipleSelection: false,
+        quality: 0.9,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const contentType = getSupportedImageContentType({
+        mimeType: asset.mimeType,
+        fileName: asset.fileName,
+        uri: asset.uri,
+      });
+
+      if (!contentType) {
+        setEditErrorMessage('Choose a JPEG, PNG, or WebP image.');
+        return;
+      }
+
+      setSelectedProfileImage({
+        uri: asset.uri,
+        contentType,
+      });
+    } catch (error) {
+      console.error('Failed to pick profile image', error);
+      setEditErrorMessage(
+        error instanceof Error ? error.message : 'Could not open your photo library right now.'
+      );
+    } finally {
+      setIsPickingProfileImage(false);
+    }
+  }
+
+  function handleRemoveProfileImage() {
+    if (isEditBusy) {
+      return;
+    }
+
+    setSelectedProfileImage(null);
+    setEditErrorMessage(null);
+  }
+
   async function handleEditSubmit() {
-    if (!user || isSubmittingEdit) {
+    if (!user || isEditBusy) {
       return;
     }
 
@@ -153,15 +239,31 @@ export default function CurrentUserProfileRoute() {
       payload.bio = trimmedBio.slice(0, BIO_MAX_LENGTH);
     }
 
-    if (Object.keys(payload).length === 0) {
+    if (Object.keys(payload).length === 0 && !selectedProfileImage) {
       setEditErrorMessage('Enter at least one profile detail to update.');
       return;
     }
 
     try {
-      setIsSubmittingEdit(true);
+      setEditSubmitPhase(selectedProfileImage ? 'uploading' : 'saving');
       setEditErrorMessage(null);
       setProfileStatusMessage(null);
+
+      if (selectedProfileImage) {
+        const uploadTarget = await createProfileImageUploadUrl({
+          contentType: selectedProfileImage.contentType,
+        });
+        const imageBlob = await getBlobFromUri(selectedProfileImage.uri);
+
+        await uploadImageBlobToUrl({
+          uploadUrl: uploadTarget.uploadUrl,
+          blob: imageBlob,
+          contentType: selectedProfileImage.contentType,
+        });
+
+        payload.profilePictureUrl = uploadTarget.pictureUrl;
+        setEditSubmitPhase('saving');
+      }
 
       const response = await updateUserProfile(user.username, payload);
       setUser(getUpdatedUser(response, user, payload));
@@ -171,7 +273,7 @@ export default function CurrentUserProfileRoute() {
       console.error('Failed to update profile', error);
       setEditErrorMessage('Could not update your profile. Please try again.');
     } finally {
-      setIsSubmittingEdit(false);
+      setEditSubmitPhase('idle');
     }
   }
 
@@ -194,6 +296,13 @@ export default function CurrentUserProfileRoute() {
       />
     );
   }
+
+  const profileImagePreviewUri = selectedProfileImage?.uri ?? user.profilePictureUrl;
+  const profileImageButtonLabel = selectedProfileImage
+    ? 'Change'
+    : user.profilePictureUrl
+      ? 'Change photo'
+      : 'Choose photo';
 
   return (
     <>
@@ -223,15 +332,15 @@ export default function CurrentUserProfileRoute() {
 
               <Pressable
                 onPress={handleEditClose}
-                disabled={isSubmittingEdit}
+                disabled={isEditBusy}
                 style={({ pressed }) => [
                   styles.closeButton,
                   {
                     backgroundColor: theme.backgroundElement,
                     borderColor: theme.backgroundSelected,
                   },
-                  pressed ? styles.pressed : null,
-                  isSubmittingEdit ? styles.disabled : null,
+                  pressed && !isEditBusy ? styles.pressed : null,
+                  isEditBusy ? styles.disabled : null,
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Close edit profile form">
@@ -239,7 +348,84 @@ export default function CurrentUserProfileRoute() {
               </Pressable>
             </View>
 
-            <View style={styles.form}>
+            <ScrollView
+              style={styles.formScroll}
+              contentContainerStyle={styles.form}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+              <View style={styles.fieldGroup}>
+                <ThemedText type="smallBold">Profile photo</ThemedText>
+                <View style={styles.profileImageEditor}>
+                  {profileImagePreviewUri ? (
+                    <Image
+                      source={profileImagePreviewUri}
+                      style={styles.profileImagePreview}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.profileImagePreview,
+                        styles.profileImageFallback,
+                        {
+                          backgroundColor: theme.backgroundElement,
+                          borderColor: theme.backgroundSelected,
+                        },
+                      ]}>
+                      <FontAwesome name="user" size={28} color={theme.textSecondary} />
+                    </View>
+                  )}
+
+                  <View style={styles.profileImageActions}>
+                    <Pressable
+                      onPress={handlePickProfileImage}
+                      disabled={isEditBusy}
+                      style={({ pressed }) => [
+                        styles.profileImageButton,
+                        {
+                          borderColor: theme.backgroundSelected,
+                          backgroundColor: theme.backgroundElement,
+                        },
+                        pressed && !isEditBusy ? styles.pressed : null,
+                        isEditBusy ? styles.disabled : null,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Choose profile photo">
+                      {isPickingProfileImage ? (
+                        <ActivityIndicator color={theme.accent} />
+                      ) : (
+                        <FontAwesome name="image" size={15} color={theme.accent} />
+                      )}
+                      <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                        {isPickingProfileImage ? 'Opening...' : profileImageButtonLabel}
+                      </ThemedText>
+                    </Pressable>
+
+                    {selectedProfileImage ? (
+                      <Pressable
+                        onPress={handleRemoveProfileImage}
+                        disabled={isEditBusy}
+                        style={({ pressed }) => [
+                          styles.profileImageButton,
+                          {
+                            borderColor: theme.backgroundSelected,
+                            backgroundColor: theme.backgroundElement,
+                          },
+                          pressed && !isEditBusy ? styles.pressed : null,
+                          isEditBusy ? styles.disabled : null,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Remove selected profile photo">
+                        <FontAwesome name="trash-o" size={15} color="#D92D20" />
+                        <ThemedText type="smallBold" style={styles.removeProfileImageText}>
+                          Remove
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+
               <View style={styles.fieldGroup}>
                 <ThemedText type="smallBold">First name</ThemedText>
                 <TextInput
@@ -247,7 +433,7 @@ export default function CurrentUserProfileRoute() {
                   onChangeText={setEditFirstName}
                   placeholder={user.firstName}
                   placeholderTextColor={theme.textSecondary}
-                  editable={!isSubmittingEdit}
+                  editable={!isEditBusy}
                   style={[
                     styles.input,
                     {
@@ -266,7 +452,7 @@ export default function CurrentUserProfileRoute() {
                   onChangeText={setEditLastName}
                   placeholder={user.lastName}
                   placeholderTextColor={theme.textSecondary}
-                  editable={!isSubmittingEdit}
+                  editable={!isEditBusy}
                   style={[
                     styles.input,
                     {
@@ -290,7 +476,7 @@ export default function CurrentUserProfileRoute() {
                   onChangeText={setEditBio}
                   placeholder={user.bio ?? 'No bio yet.'}
                   placeholderTextColor={theme.textSecondary}
-                  editable={!isSubmittingEdit}
+                  editable={!isEditBusy}
                   maxLength={BIO_MAX_LENGTH}
                   multiline
                   style={[
@@ -304,7 +490,7 @@ export default function CurrentUserProfileRoute() {
                   ]}
                 />
               </View>
-            </View>
+            </ScrollView>
 
             {editErrorMessage ? (
               <ThemedText type="small" themeColor="textSecondary" style={styles.formMessage}>
@@ -315,15 +501,15 @@ export default function CurrentUserProfileRoute() {
             <View style={styles.modalActions}>
               <Pressable
                 onPress={handleEditClose}
-                disabled={isSubmittingEdit}
+                disabled={isEditBusy}
                 style={({ pressed }) => [
                   styles.secondaryButton,
                   {
                     borderColor: theme.backgroundSelected,
                     backgroundColor: theme.backgroundElement,
                   },
-                  pressed ? styles.pressed : null,
-                  isSubmittingEdit ? styles.disabled : null,
+                  pressed && !isEditBusy ? styles.pressed : null,
+                  isEditBusy ? styles.disabled : null,
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel profile edits">
@@ -332,18 +518,18 @@ export default function CurrentUserProfileRoute() {
 
               <Pressable
                 onPress={handleEditSubmit}
-                disabled={isSubmittingEdit}
+                disabled={isEditBusy}
                 style={({ pressed }) => [
                   styles.primaryButton,
                   { backgroundColor: theme.accent, borderColor: theme.accent },
-                  pressed ? styles.pressed : null,
-                  isSubmittingEdit ? styles.disabled : null,
+                  pressed && !isEditBusy ? styles.pressed : null,
+                  isEditBusy ? styles.disabled : null,
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Save profile edits">
                 {isSubmittingEdit ? <ActivityIndicator color="#FFFFFF" /> : null}
                 <ThemedText type="smallBold" style={styles.primaryButtonText}>
-                  Save
+                  {editSaveLabel}
                 </ThemedText>
               </Pressable>
             </View>
@@ -363,6 +549,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
+    maxHeight: '88%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
     borderRadius: Spacing.four,
@@ -383,6 +570,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  formScroll: {
+    flexGrow: 0,
+  },
   form: {
     gap: Spacing.three,
   },
@@ -394,6 +584,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.two,
+  },
+  profileImageEditor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  profileImagePreview: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+  },
+  profileImageFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  profileImageActions: {
+    flex: 1,
+    gap: Spacing.two,
+  },
+  profileImageButton: {
+    minHeight: 40,
+    borderRadius: Spacing.three,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
+  removeProfileImageText: {
+    color: '#D92D20',
   },
   input: {
     minHeight: 44,
